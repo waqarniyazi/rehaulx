@@ -1,0 +1,356 @@
+"use client"
+
+import { useState } from "react"
+import { Header } from "@/components/Header/Header"
+import { Footer } from "@/components/Footer/Footer"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Switch } from "@/components/ui/switch"
+import { Sparkles, Check, Zap, Crown, Rocket, Star, Users, Shield, Headphones, TrendingUp, Globe } from "lucide-react"
+
+export default function PricingPage() {
+  const [isAnnual, setIsAnnual] = useState(false)
+
+  const plans = [
+    {
+      name: "Starter",
+      description: "Perfect for individual creators getting started",
+      icon: Sparkles,
+      price: { monthly: 0, annual: 0 },
+      badge: "Free Forever",
+      badgeColor: "bg-green-500/20 text-green-400 border-green-500/30",
+      features: [
+        "5 videos per month",
+        "Basic content generation",
+        "2 content formats (Blog, LinkedIn)",
+        "Standard processing speed",
+        "Community support",
+        "Basic analytics",
+      ],
+      limitations: ["No custom branding", "Standard quality exports", "Limited AI features"],
+      cta: "Get Started Free",
+      ctaVariant: "outline" as const,
+    },
+    {
+      name: "Creator",
+      description: "For serious content creators and small teams",
+      icon: Zap,
+      price: { monthly: 29, annual: 24 },
+      badge: "Most Popular",
+      badgeColor: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+      features: [
+        "50 videos per month",
+        "Advanced AI content generation",
+        "All 4 content formats",
+        "Priority processing",
+        "Email support",
+        "Advanced analytics",
+        "Custom branding",
+        "HD quality exports",
+        "Batch processing",
+        "API access (basic)",
+      ],
+      limitations: [],
+      cta: "Start Free Trial",
+      ctaVariant: "default" as const,
+      popular: true,
+    },
+    {
+      name: "Professional",
+      description: "For agencies and growing businesses",
+      icon: Crown,
+      price: { monthly: 99, annual: 79 },
+      badge: "Best Value",
+      badgeColor: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+      features: [
+        "200 videos per month",
+        "Premium AI models",
+        "All content formats + custom",
+        "Fastest processing",
+        "Priority support",
+        "Team collaboration (5 seats)",
+        "White-label options",
+        "4K quality exports",
+        "Advanced API access",
+        "Custom integrations",
+        "Dedicated account manager",
+      ],
+      limitations: [],
+      cta: "Start Free Trial",
+      ctaVariant: "default" as const,
+    },
+    {
+      name: "Enterprise",
+      description: "For large organizations with custom needs",
+      icon: Rocket,
+      price: { monthly: "Custom", annual: "Custom" },
+      badge: "Contact Sales",
+      badgeColor: "bg-orange-500/20 text-orange-400 border-orange-500/30",
+      features: [
+        "Unlimited videos",
+        "Custom AI model training",
+        "All features included",
+        "Dedicated infrastructure",
+        "24/7 phone support",
+        "Unlimited team seats",
+        "Full white-label solution",
+        "Custom export formats",
+        "Enterprise API",
+        "Custom integrations",
+        "SLA guarantees",
+        "On-premise deployment",
+      ],
+      limitations: [],
+      cta: "Contact Sales",
+      ctaVariant: "outline" as const,
+    },
+  ]
+
+  const faqs = [
+    {
+      question: "How does the free trial work?",
+      answer:
+        "All paid plans come with a 14-day free trial. No credit card required. You can cancel anytime during the trial period.",
+    },
+    {
+      question: "What video platforms do you support?",
+      answer: "We currently support YouTube videos. Support for Vimeo, TikTok, and other platforms is coming soon.",
+    },
+    {
+      question: "Can I change my plan anytime?",
+      answer:
+        "Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately, and we'll prorate the billing.",
+    },
+    {
+      question: "What content formats do you generate?",
+      answer:
+        "We generate blog articles (short & long), LinkedIn posts, Twitter threads, and newsletter content. Custom formats available on higher plans.",
+    },
+    {
+      question: "Is my content secure?",
+      answer:
+        "Absolutely. We use enterprise-grade security, encrypt all data, and never store your video files permanently. Your content is processed and deleted.",
+    },
+    {
+      question: "Do you offer refunds?",
+      answer:
+        "Yes, we offer a 30-day money-back guarantee on all paid plans. If you're not satisfied, we'll refund your payment in full.",
+    },
+    {
+      question: "Can I use this for commercial purposes?",
+      answer: "Yes! All plans include commercial usage rights. You own all the content generated by our AI.",
+    },
+    {
+      question: "What languages do you support?",
+      answer: "Currently, we support English content generation. Multi-language support is on our roadmap for 2024.",
+    },
+  ]
+
+  const addOns = [
+    {
+      name: "Extra Processing Power",
+      description: "2x faster video processing",
+      price: "$10/month",
+      icon: Zap,
+    },
+    {
+      name: "Premium Support",
+      description: "Priority email & chat support",
+      price: "$25/month",
+      icon: Headphones,
+    },
+    {
+      name: "Advanced Analytics",
+      description: "Detailed performance insights",
+      price: "$15/month",
+      icon: TrendingUp,
+    },
+    {
+      name: "Custom Integrations",
+      description: "Connect to your favorite tools",
+      price: "$50/month",
+      icon: Globe,
+    },
+  ]
+
+  return (
+    <div className="min-h-screen bg-black">
+      <Header />
+
+      <main className="container mx-auto px-4 py-12">
+        {/* Hero Section */}
+        <div className="text-center mb-16">
+          <div className="inline-flex items-center gap-2 bg-white/5 backdrop-blur-xl border border-white/10 rounded-full px-4 py-2 mb-6">
+            <Star className="h-4 w-4 text-yellow-400" />
+            <span className="text-sm text-white/80">Simple, Transparent Pricing</span>
+          </div>
+          <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-white via-white/90 to-white/70 bg-clip-text text-transparent mb-6">
+            Choose Your Plan
+          </h1>
+          <p className="text-xl text-white/60 max-w-3xl mx-auto mb-8">
+            Start free and scale as you grow. All plans include our core AI features with no hidden fees.
+          </p>
+
+          {/* Billing Toggle */}
+          <div className="flex items-center justify-center gap-4 mb-12">
+            <span className={`text-sm ${!isAnnual ? "text-white" : "text-white/60"}`}>Monthly</span>
+            <Switch checked={isAnnual} onCheckedChange={setIsAnnual} className="data-[state=checked]:bg-blue-500" />
+            <span className={`text-sm ${isAnnual ? "text-white" : "text-white/60"}`}>Annual</span>
+            <Badge className="bg-green-500/20 text-green-400 border-green-500/30 ml-2">Save 20%</Badge>
+          </div>
+        </div>
+
+        {/* Pricing Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+          {plans.map((plan, index) => (
+            <Card
+              key={index}
+              className={`bg-white/5 backdrop-blur-xl border transition-all duration-300 hover:scale-105 ${
+                plan.popular
+                  ? "border-blue-500/50 bg-gradient-to-b from-blue-500/10 to-transparent"
+                  : "border-white/10 hover:border-white/20"
+              }`}
+            >
+              <CardHeader className="text-center pb-4">
+                <div className="flex items-center justify-center mb-4">
+                  <div className="h-12 w-12 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-xl flex items-center justify-center">
+                    <plan.icon className="h-6 w-6 text-blue-400" />
+                  </div>
+                </div>
+                <CardTitle className="text-white text-xl mb-2">{plan.name}</CardTitle>
+                <p className="text-white/60 text-sm mb-4">{plan.description}</p>
+                <Badge className={plan.badgeColor}>{plan.badge}</Badge>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="text-center mb-6">
+                  <div className="text-3xl font-bold text-white mb-1">
+                    {typeof plan.price.monthly === "number" ? (
+                      <>
+                        ${isAnnual ? plan.price.annual : plan.price.monthly}
+                        <span className="text-lg text-white/60">/month</span>
+                      </>
+                    ) : (
+                      plan.price.monthly
+                    )}
+                  </div>
+                  {typeof plan.price.monthly === "number" && plan.price.monthly > 0 && isAnnual && (
+                    <p className="text-sm text-white/60">Billed annually (${plan.price.annual * 12}/year)</p>
+                  )}
+                </div>
+
+                <ul className="space-y-3 mb-6">
+                  {plan.features.map((feature, featureIndex) => (
+                    <li key={featureIndex} className="flex items-start gap-2">
+                      <Check className="h-4 w-4 text-green-400 mt-0.5 flex-shrink-0" />
+                      <span className="text-white/80 text-sm">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <Button
+                  className={`w-full ${
+                    plan.ctaVariant === "default"
+                      ? "bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white border-0"
+                      : "bg-white/5 border-white/20 text-white hover:bg-white/10"
+                  }`}
+                  variant={plan.ctaVariant}
+                >
+                  {plan.cta}
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Add-ons Section */}
+        <div className="mb-16">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-white mb-4">Power-ups & Add-ons</h2>
+            <p className="text-white/60 max-w-2xl mx-auto">
+              Enhance your plan with additional features and capabilities.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {addOns.map((addon, index) => (
+              <Card key={index} className="bg-white/5 backdrop-blur-xl border border-white/10">
+                <CardContent className="p-6 text-center">
+                  <div className="h-12 w-12 mx-auto mb-4 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-xl flex items-center justify-center">
+                    <addon.icon className="h-6 w-6 text-blue-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white mb-2">{addon.name}</h3>
+                  <p className="text-white/60 text-sm mb-4">{addon.description}</p>
+                  <div className="text-blue-400 font-semibold">{addon.price}</div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+
+        {/* FAQ Section */}
+        <div className="mb-16">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-white mb-4">Frequently Asked Questions</h2>
+            <p className="text-white/60 max-w-2xl mx-auto">
+              Got questions? We've got answers. Can't find what you're looking for? Contact our support team.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {faqs.map((faq, index) => (
+              <Card key={index} className="bg-white/5 backdrop-blur-xl border border-white/10">
+                <CardContent className="p-6">
+                  <h3 className="text-lg font-semibold text-white mb-3">{faq.question}</h3>
+                  <p className="text-white/60">{faq.answer}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+
+        {/* Enterprise CTA */}
+        <Card className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-white/10">
+          <CardContent className="p-8 md:p-12">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+              <div>
+                <h2 className="text-3xl font-bold text-white mb-4">Need Something Custom?</h2>
+                <p className="text-white/80 mb-6 leading-relaxed">
+                  Large organization? Unique requirements? We offer custom solutions tailored to your specific needs,
+                  including on-premise deployment, custom AI model training, and dedicated support.
+                </p>
+                <ul className="space-y-2 mb-6">
+                  <li className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-green-400" />
+                    <span className="text-white/80">Custom pricing and contracts</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-green-400" />
+                    <span className="text-white/80">Dedicated infrastructure</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-green-400" />
+                    <span className="text-white/80">24/7 premium support</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-green-400" />
+                    <span className="text-white/80">SLA guarantees</span>
+                  </li>
+                </ul>
+                <Button className="bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-700 hover:to-purple-600 text-white border-0">
+                  <Users className="mr-2 h-4 w-4" />
+                  Contact Enterprise Sales
+                </Button>
+              </div>
+              <div className="relative">
+                <div className="aspect-square bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-2xl flex items-center justify-center">
+                  <Shield className="h-24 w-24 text-purple-400" />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </main>
+
+      <Footer />
+    </div>
+  )
+}
