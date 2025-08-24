@@ -190,7 +190,7 @@ export default function DashboardPage() {
             </h1>
             <p className="text-white/60">Manage your content projects and track your success</p>
           </div>
-          <Link href="/repurpose">
+          <Link href="/">
             <Button className="mt-4 md:mt-0 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white border-0">
               <Plus className="mr-2 h-4 w-4" />
               New Project
@@ -267,7 +267,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Link href="/repurpose">
+              <Link href="/">
                 <Button
                   variant="outline"
                   className="w-full h-20 bg-white/5 border-white/20 text-white hover:bg-white/10 hover:border-white/30 flex-col gap-2"
@@ -340,7 +340,7 @@ export default function DashboardPage() {
                       </div>
                       <h3 className="text-lg font-semibold mb-2 text-white">No projects yet</h3>
                       <p className="text-white/60 mb-6">Create your first content project to get started</p>
-                      <Link href="/repurpose">
+                      <Link href="/">
                         <Button className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white border-0">
                           <Plus className="mr-2 h-4 w-4" />
                           Create Project

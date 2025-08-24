@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Upload, LinkIcon, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import type { TranscriptSegment } from "@/app/repurpose/page"
+import type { TranscriptSegment } from "@/types"
 
 interface VideoUploaderProps {
   onVideoProcessed: (url: string, transcript: TranscriptSegment[]) => void

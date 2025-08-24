@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, Sparkles } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import type { TranscriptSegment } from "@/app/repurpose/page"
+import type { TranscriptSegment } from "@/types"
 
 interface TimestampSelectorProps {
   transcript: TranscriptSegment[]

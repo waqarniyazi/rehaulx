@@ -117,17 +117,67 @@ html {
   background: hsl(var(--primary));
 }
 
-/* Line clamp utility */
-.line-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+/* Prose formatting for content */
+.prose-formatted h1 {
+  @apply text-2xl sm:text-3xl font-bold text-white mb-3 sm:mb-4;
 }
 
-.line-clamp-3 {
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+.prose-formatted h2 {
+  @apply text-xl sm:text-2xl font-semibold text-white mb-2 sm:mb-3;
+}
+
+.prose-formatted h3 {
+  @apply text-lg sm:text-xl font-medium text-white mb-2;
+}
+
+.prose-formatted p {
+  @apply text-sm sm:text-base text-white/80 mb-3 sm:mb-4 leading-relaxed;
+}
+
+.prose-formatted strong {
+  @apply font-semibold text-white;
+}
+
+.prose-formatted em {
+  @apply italic text-white/90;
+}
+
+.prose-formatted ul {
+  @apply list-disc list-inside space-y-1 text-white/80 mb-3 sm:mb-4 text-sm sm:text-base;
+}
+
+.prose-formatted li {
+  @apply ml-3 sm:ml-4 leading-relaxed;
+}
+
+.prose-formatted .frame-suggestion {
+  @apply my-4 sm:my-6 p-3 sm:p-4 bg-white/5 border border-white/10 rounded-lg;
+}
+
+.prose-formatted .frame-suggestion img {
+  @apply w-full max-w-sm mx-auto rounded-lg shadow-md border border-white/20;
+}
+
+.prose-formatted .frame-suggestion p {
+  @apply text-xs sm:text-sm text-white/60 mt-2 text-center;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .prose-formatted h1 {
+    font-size: 1.5rem;
+  }
+  
+  .prose-formatted h2 {
+    font-size: 1.25rem;
+  }
+  
+  .prose-formatted h3 {
+    font-size: 1.125rem;
+  }
+  
+  .prose-formatted .frame-suggestion {
+    margin: 1rem 0;
+    padding: 0.75rem;
+  }
 }

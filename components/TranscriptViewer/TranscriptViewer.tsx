@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { ChevronDown, ChevronRight } from "lucide-react"
-import type { TranscriptSegment } from "@/app/repurpose/page"
+import type { TranscriptSegment } from "@/types"
 
 interface TranscriptViewerProps {
   transcript: TranscriptSegment[]

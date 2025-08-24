@@ -113,7 +113,7 @@ export default function AboutPage() {
             content across multiple platforms with the power of artificial intelligence.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/repurpose">
+            <Link href="/">
               <Button className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white border-0">
                 <Rocket className="mr-2 h-4 w-4" />
                 Start Creating
@@ -262,7 +262,7 @@ export default function AboutPage() {
               content with AI today.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/repurpose">
+              <Link href="/">
                 <Button className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white border-0">
                   <Zap className="mr-2 h-4 w-4" />
                   Start Free Trial

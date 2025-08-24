@@ -1,0 +1,9 @@
+{
+  "name": "rehaulx-app-subdomain",
+  "version": "0.1.0",
+  "scripts": {
+    "dev:app": "next dev -p 3001 --experimental-config-path next.config.app.mjs",
+    "build:app": "next build --experimental-config-path next.config.app.mjs",
+    "start:app": "next start -p 3001"
+  }
+}

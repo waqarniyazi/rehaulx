@@ -9,29 +9,13 @@ import { ContentGenerationStep } from "./components/ContentGenerationStep"
 import { ContentResultStep } from "./components/ContentResultStep"
 import { StepNavigation } from "./components/StepNavigation"
 import { VideoInfoCard } from "./components/VideoInfoCard"
+import type { TranscriptSegment, VideoInfo, KeyFrame } from "@/types"
 
-export interface TranscriptSegment {
-  text: string
-  start: number
-  duration: number
-}
-
-export interface VideoInfo {
-  title: string
-  thumbnail: string
-  duration: string
-  url: string
-  videoId: string
-  transcript: TranscriptSegment[]
-  author: string
-  viewCount: string
-  uploadDate: string
-}
-
-export interface KeyFrame {
-  timestamp: number
-  description: string
-  imageUrl?: string
+export interface GeneratedContent {
+  blog: string
+  linkedin: string
+  twitter: string
+  newsletter: string
 }
 
 export default function RepurposePage() {
@@ -102,13 +86,13 @@ export default function RepurposePage() {
     <div className="min-h-screen bg-black">
       <Header />
 
-      <main className="container mx-auto px-4 py-12">
+      <main className="container mx-auto px-4 py-8 md:py-12">
         {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-white via-white/90 to-white/70 bg-clip-text text-transparent mb-4">
+        <div className="text-center mb-8 md:mb-12">
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-white via-white/90 to-white/70 bg-clip-text text-transparent mb-4">
             Repurpose Your Content
           </h1>
-          <p className="text-xl text-white/60 max-w-2xl mx-auto">
+          <p className="text-lg md:text-xl text-white/60 max-w-2xl mx-auto px-4">
             Transform any YouTube video into professional content in minutes
           </p>
         </div>
@@ -121,10 +105,10 @@ export default function RepurposePage() {
           canGoToStep={canGoToStep}
         />
 
-        <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
             {/* Main Content Area */}
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-2 order-2 lg:order-1">
               {currentStep === 1 && (
                 <VideoSubmissionStep
                   onVideoSubmitted={handleVideoSubmitted}
@@ -160,8 +144,12 @@ export default function RepurposePage() {
             </div>
 
             {/* Sidebar - Video Info */}
-            <div className="lg:col-span-1">
-              {videoInfo && <VideoInfoCard videoInfo={videoInfo} currentStep={currentStep} />}
+            <div className="lg:col-span-1 order-1 lg:order-2">
+              {videoInfo && (
+                <div className="sticky top-6">
+                  <VideoInfoCard videoInfo={videoInfo} currentStep={currentStep} />
+                </div>
+              )}
             </div>
           </div>
         </div>

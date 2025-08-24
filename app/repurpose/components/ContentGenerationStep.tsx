@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Loader2, CheckCircle } from "lucide-react"
 import { toast } from "sonner"
+import { formatStreamingContent } from "@/lib/contentFormatter"
 import type { VideoInfo, KeyFrame } from "../page"
 
 interface ContentGenerationStepProps {
@@ -95,6 +96,9 @@ export function ContentGenerationStep({ videoInfo, contentType, onContentGenerat
               setCurrentMessage("Content generation complete!")
               setIsComplete(true)
 
+              // Use the content from the complete event, not from streaming chunks
+              const finalContent = data.content || content
+
               // Extract frames for key timestamps
               if (timestamps.length > 0) {
                 try {
@@ -110,16 +114,16 @@ export function ContentGenerationStep({ videoInfo, contentType, onContentGenerat
                   if (frameResponse.ok) {
                     const frameData = await frameResponse.json()
                     setKeyFrames(frameData.frames || [])
-                    onContentGenerated(content, frameData.frames || [])
+                    onContentGenerated(finalContent, frameData.frames || [])
                   } else {
-                    onContentGenerated(content, [])
+                    onContentGenerated(finalContent, [])
                   }
                 } catch (frameError) {
                   console.warn("Frame extraction failed:", frameError)
-                  onContentGenerated(content, [])
+                  onContentGenerated(finalContent, [])
                 }
               } else {
-                onContentGenerated(content, [])
+                onContentGenerated(finalContent, [])
               }
 
               toast.success("Content generated successfully!", {
@@ -181,7 +185,12 @@ export function ContentGenerationStep({ videoInfo, contentType, onContentGenerat
             <div className="space-y-2">
               <h3 className="text-white font-semibold">Generated Content Preview:</h3>
               <div className="bg-white/5 border border-white/10 rounded-lg p-4 max-h-96 overflow-y-auto">
-                <div className="text-white/80 text-sm whitespace-pre-wrap">{generatedContent}</div>
+                <div 
+                  className="text-white/80 text-sm"
+                  dangerouslySetInnerHTML={{
+                    __html: formatStreamingContent(generatedContent)
+                  }}
+                />
               </div>
             </div>
           )}
