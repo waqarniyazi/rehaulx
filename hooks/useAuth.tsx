@@ -3,8 +3,8 @@
 import type React from "react"
 
 import { createContext, useContext, useEffect, useState, useRef } from "react"
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
-import type { User } from "@supabase/auth-helpers-nextjs"
+import { createClient } from "@/lib/supabase/client"
+import type { User } from "@supabase/supabase-js"
 import { toast } from "sonner"
 
 interface AuthContextType {
@@ -28,7 +28,7 @@ const AuthContext = createContext<AuthContextType>({
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const supabase = createClientComponentClient()
+  const supabase = createClient()
   const isInitialized = useRef(false)
 
   useEffect(() => {
@@ -64,7 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event: any, session: any) => {
       console.log("Auth state changed:", event, session?.user?.email)
 
       const previousUser = user
@@ -97,7 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw error
       }
 
-      return data
+      // Don't return data, make it void as expected
     } catch (error: any) {
       console.error("Sign in error:", error)
       throw new Error(error.message || "Failed to sign in")
@@ -122,7 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw error
       }
 
-      return data
+      // Don't return data, make it void as expected
     } catch (error: any) {
       console.error("Sign up error:", error)
       throw new Error(error.message || "Failed to create account")

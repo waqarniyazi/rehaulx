@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Header } from "@/components/Header/Header"
 import { Footer } from "@/components/Footer/Footer"
 import { VideoSubmissionStep } from "./components/VideoSubmissionStep"
@@ -9,6 +10,7 @@ import { ContentGenerationStep } from "./components/ContentGenerationStep"
 import { ContentResultStep } from "./components/ContentResultStep"
 import { StepNavigation } from "./components/StepNavigation"
 import { VideoInfoCard } from "./components/VideoInfoCard"
+import { useAuth } from "@/hooks/useAuth"
 import type { TranscriptSegment, VideoInfo, KeyFrame } from "@/types"
 
 export interface GeneratedContent {
@@ -19,12 +21,42 @@ export interface GeneratedContent {
 }
 
 export default function RepurposePage() {
+  const { user, loading } = useAuth()
+  const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
   const [videoInfo, setVideoInfo] = useState<VideoInfo | null>(null)
   const [selectedContentType, setSelectedContentType] = useState<string>("")
   const [generatedContent, setGeneratedContent] = useState<string>("")
   const [keyFrames, setKeyFrames] = useState<KeyFrame[]>([])
   const [isLoading, setIsLoading] = useState(false)
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/auth/callback?redirect=/repurpose')
+    }
+  }, [user, loading, router])
+
+  // Show loading while checking auth
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+        <Header />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-white text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-4"></div>
+            <p>Loading...</p>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    )
+  }
+
+  // Don't render if not authenticated
+  if (!user) {
+    return null
+  }
 
   const steps = [
     { number: 1, title: "Submit Video", description: "Enter YouTube URL" },
