@@ -27,8 +27,16 @@ export function ContentGenerationStep({ videoInfo, contentType, onContentGenerat
 
   const startGeneration = async () => {
     try {
+      // First check if transcript is available
+      if (!videoInfo.transcript || videoInfo.transcript.length === 0) {
+        toast.error("Cannot generate content", {
+          description: "No transcript available for this video. Content generation requires video captions or transcript.",
+        })
+        return
+      }
+
       // First, generate key timestamps
-      setCurrentMessage("Analyzing video for key moments...")
+      setCurrentMessage("Analyzing video content structure...")
       setProgress(10)
 
       const timestampResponse = await fetch("/api/generate-timestamps", {
@@ -47,7 +55,7 @@ export function ContentGenerationStep({ videoInfo, contentType, onContentGenerat
       }
 
       setProgress(20)
-      setCurrentMessage("Generating content with AI...")
+      setCurrentMessage("Intelligently analyzing video content...")
 
       // Start content generation with streaming
       const response = await fetch("/api/generate-content", {
@@ -200,10 +208,10 @@ export function ContentGenerationStep({ videoInfo, contentType, onContentGenerat
             <h3 className="text-white font-semibold">Generation Process:</h3>
             <div className="space-y-2">
               {[
-                { step: "Analyzing transcript", completed: progress >= 20 },
-                { step: "Identifying key moments", completed: progress >= 40 },
-                { step: "Generating content", completed: progress >= 80 },
-                { step: "Extracting visual frames", completed: progress >= 100 },
+                { step: "Analyzing video intelligence", completed: progress >= 20 },
+                { step: "Identifying key insights", completed: progress >= 40 },
+                { step: "Crafting content structure", completed: progress >= 80 },
+                { step: "Extracting visual moments", completed: progress >= 100 },
               ].map((item, index) => (
                 <div key={index} className="flex items-center gap-3">
                   <div

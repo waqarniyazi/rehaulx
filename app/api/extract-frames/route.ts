@@ -1,7 +1,4 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { spawn } from "child_process"
-import path from "path"
-import fs from "fs"
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,57 +10,29 @@ export async function POST(request: NextRequest) {
 
     console.log("Extracting frames for timestamps:", timestamps)
 
-    const videoId = extractVideoId(videoUrl)
-    if (!videoId) {
-      return NextResponse.json({ error: "Invalid YouTube URL" }, { status: 400 })
+    // Use the Heroku video service for frame extraction
+    const videoServiceUrl = process.env.VIDEO_SERVICE_URL
+    if (!videoServiceUrl) {
+      return NextResponse.json(
+        { error: "Video service not configured" }, 
+        { status: 500 }
+      )
     }
 
-    const tempDir = path.join(process.cwd(), "temp", videoId)
+    const response = await fetch(`${videoServiceUrl}/api/extract-frames`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: videoUrl, timestamps }),
+    })
 
-    // Create temp directory
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir, { recursive: true })
+    if (!response.ok) {
+      throw new Error(`Video service responded with status: ${response.status}`)
     }
 
-    const frames: { timestamp: number; imageUrl: string; description?: string }[] = []
+    const data = await response.json()
+    console.log(`Successfully extracted ${data.frames?.length || 0} frames via Heroku service`)
 
-    // Extract frames at specified timestamps using yt-dlp + ffmpeg
-    for (const timestamp of timestamps) {
-      try {
-        const outputPath = path.join(tempDir, `frame_${timestamp}.jpg`)
-
-        // Use yt-dlp to get video stream and extract frame with ffmpeg
-        await extractFrameAtTimestamp(videoUrl, timestamp, outputPath)
-
-        // Convert to base64 for immediate use
-        if (fs.existsSync(outputPath)) {
-          const imageBuffer = fs.readFileSync(outputPath)
-          const base64Image = `data:image/jpeg;base64,${imageBuffer.toString("base64")}`
-
-          frames.push({
-            timestamp,
-            imageUrl: base64Image,
-            description: `Frame at ${Math.floor(timestamp)}s`,
-          })
-
-          // Clean up temp file
-          fs.unlinkSync(outputPath)
-        }
-      } catch (error) {
-        console.error(`Failed to extract frame at ${timestamp}s:`, error)
-      }
-    }
-
-    // Clean up temp directory
-    try {
-      fs.rmdirSync(tempDir, { recursive: true })
-    } catch (e) {
-      // Ignore cleanup errors
-    }
-
-    console.log(`Successfully extracted ${frames.length} frames`)
-
-    return NextResponse.json({ frames })
+    return NextResponse.json(data)
   } catch (error) {
     console.error("Frame extraction error:", error)
     return NextResponse.json(
@@ -74,52 +43,6 @@ export async function POST(request: NextRequest) {
       { status: 500 },
     )
   }
-}
-
-async function extractFrameAtTimestamp(videoUrl: string, timestamp: number, outputPath: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const ytDlpPath = process.env.YT_DLP_PATH || "yt-dlp"
-
-    // Use yt-dlp to pipe video to ffmpeg for frame extraction
-    const ytDlpProcess = spawn(ytDlpPath, ["-f", "best[height<=720]", "--quiet", "-o", "-", videoUrl])
-
-    const ffmpegProcess = spawn("ffmpeg", [
-      "-i",
-      "pipe:0",
-      "-ss",
-      timestamp.toString(),
-      "-vframes",
-      "1",
-      "-q:v",
-      "2",
-      "-y",
-      outputPath,
-    ])
-
-    ytDlpProcess.stdout.pipe(ffmpegProcess.stdin)
-
-    let stderr = ""
-
-    ffmpegProcess.stderr.on("data", (data) => {
-      stderr += data.toString()
-    })
-
-    ffmpegProcess.on("close", (code) => {
-      if (code === 0) {
-        resolve()
-      } else {
-        reject(new Error(`FFmpeg failed with code ${code}: ${stderr}`))
-      }
-    })
-
-    ytDlpProcess.on("error", (error) => {
-      reject(new Error(`yt-dlp error: ${error.message}`))
-    })
-
-    ffmpegProcess.on("error", (error) => {
-      reject(new Error(`FFmpeg error: ${error.message}`))
-    })
-  })
 }
 
 function extractVideoId(url: string): string | null {

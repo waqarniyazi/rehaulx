@@ -5,11 +5,32 @@ export async function POST(request: NextRequest) {
   try {
     const { videoUrl, contentType, userId, transcript, keyFrames } = await request.json()
 
-    if (!transcript || !contentType) {
-      return NextResponse.json({ error: "Transcript and content type are required" }, { status: 400 })
+    // Require transcript for content generation
+    if (!transcript || !Array.isArray(transcript) || transcript.length === 0) {
+      return NextResponse.json({ 
+        error: "Transcript is required for content generation", 
+        details: "Cannot generate content without video transcript. Please ensure the video has captions or transcript available."
+      }, { status: 400 })
     }
 
-    console.log("Generating content:", { contentType, transcriptLength: transcript.length })
+    if (!contentType) {
+      return NextResponse.json({ error: "Content type is required" }, { status: 400 })
+    }
+
+    console.log("Generating content:", { 
+      contentType, 
+      transcriptLength: transcript.length,
+      hasTranscript: transcript.length > 0
+    })
+
+    // Validate transcript quality
+    const totalWords = transcript.reduce((acc: number, seg: any) => acc + (seg.text || '').split(' ').length, 0)
+    if (totalWords < 50) {
+      return NextResponse.json({ 
+        error: "Transcript too short for content generation", 
+        details: "The video transcript is too short to generate meaningful content. Please try with a longer video."
+      }, { status: 400 })
+    }
 
     // Create a readable stream for real-time updates
     const encoder = new TextEncoder()
@@ -37,8 +58,16 @@ export async function POST(request: NextRequest) {
 
           const transcriptText = transcriptWithTimestamps.map((seg: any) => `${seg.timestamp} ${seg.text}`).join("\n")
 
+          // Enhanced prompt with video metadata
+          const videoInfo = {
+            title: transcript[0]?.videoTitle || "Video Content",
+            author: transcript[0]?.videoAuthor || "Content Creator", 
+            description: transcript[0]?.videoDescription || "",
+            duration: transcript[0]?.videoDuration || "Unknown"
+          }
+
           // Generate content type-specific prompt
-          const prompt = generatePrompt(contentType, transcriptText, keyFrames, transcriptWithTimestamps)
+          const prompt = generatePrompt(contentType, transcriptText, keyFrames, transcriptWithTimestamps, videoInfo)
 
           controller.enqueue(
             encoder.encode(
@@ -137,41 +166,57 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function generatePrompt(contentType: string, transcriptText: string, keyFrames: any[], timestampMap: any[]): string {
+function generatePrompt(contentType: string, transcriptText: string, keyFrames: any[], timestampMap: any[], videoInfo?: any): string {
   const keyTimestamps = keyFrames?.map((kf) => kf.timestamp).join(", ") || ""
+  const videoContext = videoInfo ? `
+Video Information:
+- Title: ${videoInfo.title}
+- Author: ${videoInfo.author} 
+- Duration: ${videoInfo.duration}
+- Description: ${videoInfo.description}
+` : ""
 
   const prompts = {
-    "short-article": `Write a 500-word SEO-optimized blog article based on this video transcript. 
+    "short-article": `Write a 500-word SEO-optimized blog article based on this video content.
+
+${videoContext}
+
+Use the video title and description as context for creating compelling, accurate content.
 
 IMPORTANT: For each paragraph, include a comment indicating which timestamp range it covers, like this:
 <!-- TIMESTAMP_RANGE: 0-30 --> (for content covering 0 to 30 seconds)
 <!-- TIMESTAMP_RANGE: 45-90 --> (for content covering 45 to 90 seconds)
 
 Include:
-- Compelling headline
-- Introduction hook
+- Compelling headline (incorporate video title if relevant)
+- Introduction hook referencing the video content
 - 3-4 main sections with subheadings
 - Conclusion with call-to-action
 - Focus on key insights from timestamps: ${keyTimestamps}
 
-Transcript with timestamps:
+Video Transcript with timestamps:
 ${transcriptText}`,
 
-    "long-article": `Write a comprehensive 1000+ word blog article based on this video transcript.
+    "long-article": `Write a comprehensive 1000+ word blog article based on this video content.
+
+${videoContext}
+
+Use the video title, description, and author information to create authoritative, well-researched content.
 
 IMPORTANT: For each paragraph, include a comment indicating which timestamp range it covers, like this:
 <!-- TIMESTAMP_RANGE: 0-30 --> (for content covering 0 to 30 seconds)
 <!-- TIMESTAMP_RANGE: 45-90 --> (for content covering 45 to 90 seconds)
 
 Include:
-- SEO-optimized title and meta description
-- Detailed introduction
+- SEO-optimized title (incorporate video title elements)
+- Meta description incorporating key insights
+- Detailed introduction that references the original video
 - 5-7 main sections with subheadings
-- Examples and actionable insights
+- Examples and actionable insights from the content
 - Conclusion with strong call-to-action
 - Focus on key moments at: ${keyTimestamps}
 
-Transcript with timestamps:
+Video Transcript with timestamps:
 ${transcriptText}`,
 
     linkedin: `Create a professional LinkedIn post based on this video transcript.
