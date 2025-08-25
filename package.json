@@ -6,7 +6,8 @@
     "build": "next build",
     "dev": "next dev",
     "lint": "next lint",
-    "start": "next start"
+    "start": "next start",
+    "postinstall": "node scripts/install-yt-dlp.js || echo 'yt-dlp installation skipped'"
   },
   "dependencies": {
     "@ai-sdk/deepinfra": "latest",
