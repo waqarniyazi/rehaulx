@@ -21,15 +21,30 @@ export default function HomePage() {
   const { user } = useAuth()
 
   const handleGetStarted = () => {
-    if (user) {
-      window.location.href = "/repurpose"
-    } else {
-      setShowAuthModal(true)
+    const appUrl = process.env.NODE_ENV === "development" 
+      ? "http://app.localhost:3000" 
+      : "https://app.rehaulx.com"
+    // Always take users to the app domain; add ?auth=1 only if not present.
+    try {
+      const target = new URL(appUrl)
+      if (!target.searchParams.has("auth")) target.searchParams.set("auth", "1")
+      window.location.href = target.toString()
+    } catch {
+      window.location.href = `${appUrl}?auth=1`
     }
   }
 
   const handleSignUp = () => {
-    setShowAuthModal(true)
+    const appUrl = process.env.NODE_ENV === "development" 
+      ? "http://app.localhost:3000" 
+      : "https://app.rehaulx.com"
+    try {
+      const target = new URL(appUrl)
+      if (!target.searchParams.has("auth")) target.searchParams.set("auth", "1")
+      window.location.href = target.toString()
+    } catch {
+      window.location.href = `${appUrl}?auth=1`
+    }
   }
 
   return (

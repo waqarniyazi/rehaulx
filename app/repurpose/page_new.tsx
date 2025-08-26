@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Header } from '@/components/Header/Header'
 import { Footer } from '@/components/Footer/Footer'
-import { Button } from '@/components/ui/button'
 import { VideoSubmissionStep } from './components/VideoSubmissionStep'
 import { ContentTypeSelectionStep } from './components/ContentTypeSelectionStep'
 import { ContentGenerationStep } from './components/ContentGenerationStep'
@@ -12,7 +11,6 @@ import { ContentResultStep } from './components/ContentResultStep'
 import { StepNavigation } from './components/StepNavigation'
 import { VideoInfoCard } from './components/VideoInfoCard'
 import { useAuth } from '@/hooks/useAuth'
-import { User } from 'lucide-react'
 import type { TranscriptSegment, VideoInfo, KeyFrame } from '@/types'
 
 export interface GeneratedContent {
@@ -31,58 +29,34 @@ export default function RepurposePage() {
   const [generatedContent, setGeneratedContent] = useState<string>('')
   const [keyFrames, setKeyFrames] = useState<KeyFrame[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [redirecting, setRedirecting] = useState(false)
 
-  // Handle authentication - redirect to main site for login
-  if (!loading && !user) {
-    return (
-      <div className="min-h-screen bg-black">
-        <Header />
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="text-white text-center max-w-md mx-auto px-4">
-            <div className="h-16 w-16 rounded-2xl bg-gradient-to-r from-blue-500/20 to-purple-500/20 flex items-center justify-center mx-auto mb-6">
-              <User className="h-8 w-8 text-blue-400" />
-            </div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-white via-white/90 to-white/70 bg-clip-text text-transparent mb-4">
-              Sign In Required
-            </h1>
-            <p className="text-white/60 mb-6">
-              Please sign in to access the repurpose tools and start creating amazing content.
-            </p>
-            <Button
-              onClick={() => {
-                // Trigger the Header's auth modal on the current app domain
-                try {
-                  const url = new URL(window.location.href)
-                  url.searchParams.set('auth', '1')
-                  // Prefer SPA replace when possible
-                  try { router.replace(`${url.pathname}?${url.searchParams.toString()}`) } catch {
-                    window.history.replaceState(null, '', url.toString())
-                  }
-                } catch {}
-                // Fallback: reload to ensure modal opens in edge cases
-                window.location.href = `${window.location.origin}${window.location.pathname}?auth=1`
-              }}
-              className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white border-0 font-semibold shadow-2xl shadow-blue-500/25 hover:shadow-blue-500/40 transition-all duration-300 hover:scale-105"
-            >
-              <User className="mr-2 h-4 w-4" />
-              Go to Sign In
-            </Button>
-          </div>
-        </div>
-        <Footer />
-      </div>
-    )
-  }
+  // Handle authentication redirect
+  useEffect(() => {
+    if (!loading && !user && !redirecting) {
+      setRedirecting(true)
+      const redirectUrl = process.env.NODE_ENV === 'development' 
+        ? 'http://localhost:3000/auth/callback?redirect=/repurpose'
+        : 'https://rehaulx.com/auth/callback?redirect=/repurpose'
+      
+      // Use window.location.href for cross-domain redirect
+      setTimeout(() => {
+        window.location.href = redirectUrl
+      }, 100)
+    }
+  }, [user, loading, redirecting])
 
-  // Show loading while checking auth
-  if (loading) {
+  // Show loading state
+  if (loading || redirecting || !user) {
     return (
       <div className="min-h-screen bg-black">
         <Header />
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-white text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <p className="text-white/60">Loading...</p>
+            <p className="text-white/60">
+              {loading ? 'Loading...' : redirecting ? 'Redirecting to sign in...' : 'Please wait...'}
+            </p>
           </div>
         </div>
         <Footer />

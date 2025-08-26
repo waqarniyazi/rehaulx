@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -20,10 +21,11 @@ export function Header() {
   const [isOpen, setIsOpen] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const { user, signOut, loading } = useAuth()
+  const searchParams = useSearchParams()
 
   const navigation = [
     { name: "Home", href: "/" },
-    { name: "Repurpose", href: "/repurpose" },
+    { name: "Repurpose", href: process.env.NODE_ENV === "development" ? "http://app.localhost:3000" : "https://app.rehaulx.com" },
     { name: "About", href: "/about" },
     { name: "Pricing", href: "/pricing" },
   ]
@@ -31,6 +33,37 @@ export function Header() {
   const handleSignOut = async () => {
     await signOut()
   }
+
+  // Auto-open auth modal when ?auth=1 is in the URL (CTA-driven login)
+  useEffect(() => {
+    const shouldOpen = searchParams.get("auth") === "1"
+    if (shouldOpen && !user && !loading) {
+      setShowAuthModal(true)
+    }
+  }, [searchParams, user, loading])
+
+  // If the user becomes signed in, close modal and strip flag
+  useEffect(() => {
+    if (user && showAuthModal) {
+      setShowAuthModal(false)
+      try {
+        const url = new URL(window.location.href)
+        url.searchParams.delete("auth")
+        window.history.replaceState(null, "", url.toString())
+      } catch {}
+    }
+  }, [user, showAuthModal])
+
+  // After sign-in, honor a ?redirect= param if present (cross-subdomain handoff)
+  useEffect(() => {
+    if (!user) return
+    const redirect = searchParams.get("redirect")
+    if (redirect) {
+      try {
+        window.location.href = redirect
+      } catch {}
+    }
+  }, [user, searchParams])
 
   return (
     <>
@@ -52,7 +85,7 @@ export function Header() {
                 <Link
                   key={item.name}
                   href={item.href}
-                  className="transition-colors hover:text-blue-400 text-white/80 hover:text-white"
+                  className="transition-colors text-white/80 hover:text-blue-400"
                 >
                   {item.name}
                 </Link>
@@ -105,17 +138,15 @@ export function Header() {
               </Link>
             </div>
             <nav className="flex items-center">
-              {loading ? (
-                <div className="h-8 w-8 rounded-full bg-white/10 animate-pulse" />
-              ) : user ? (
+              {user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-8 w-8 rounded-full hover:bg-white/10">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src={user.user_metadata?.avatar_url || "/placeholder.svg"} alt={user.email} />
+                        <AvatarImage src={user.user_metadata?.avatar_url || "/placeholder.svg"} alt={user.email || ""} />
                         <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white">
                           {user.user_metadata?.first_name?.charAt(0)?.toUpperCase() ||
-                            user.email?.charAt(0).toUpperCase()}
+                            user.email?.charAt(0)?.toUpperCase() || "U"}
                         </AvatarFallback>
                       </Avatar>
                     </Button>
@@ -144,11 +175,28 @@ export function Header() {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+              ) : loading ? (
+                <div className="h-8 w-8 rounded-full bg-white/10 animate-pulse" />
               ) : (
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setShowAuthModal(true)}
+                  onClick={() => {
+                    try {
+                      const host = window.location.hostname
+                      const isApp = host === "app.localhost" || host.startsWith("app.")
+                      if (isApp) {
+                        setShowAuthModal(true)
+                      } else {
+                        const appUrl = process.env.NODE_ENV === "development"
+                          ? "http://app.localhost:3000"
+                          : "https://app.rehaulx.com"
+                        window.location.href = `${appUrl}?auth=1`
+                      }
+                    } catch {
+                      setShowAuthModal(true)
+                    }
+                  }}
                   className="text-white hover:bg-white/10"
                 >
                   <User className="mr-2 h-4 w-4" />
@@ -159,7 +207,18 @@ export function Header() {
           </div>
         </div>
       </header>
-      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => {
+          setShowAuthModal(false)
+          // Clean the auth flag from URL
+          try {
+            const url = new URL(window.location.href)
+            url.searchParams.delete("auth")
+            window.history.replaceState(null, "", url.toString())
+          } catch {}
+        }}
+      />
     </>
   )
 }

@@ -13,6 +13,12 @@ export async function middleware(request: NextRequest) {
       url.pathname = '/repurpose'
       return NextResponse.rewrite(url)
     }
+    
+    // Block access to other pages on app subdomain
+    if (url.pathname !== '/repurpose' && !url.pathname.startsWith('/api') && !url.pathname.startsWith('/_next')) {
+      url.pathname = '/repurpose'
+      return NextResponse.redirect(url)
+    }
   }
 
   // Continue with auth middleware

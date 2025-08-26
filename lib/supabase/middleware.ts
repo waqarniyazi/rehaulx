@@ -1,5 +1,5 @@
-import { createServerClient } from "@supabase/ssr"
-import { NextResponse, type NextRequest } from "next/server"
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { NextResponse, type NextRequest } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -15,17 +15,34 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          const isProd = process.env.NODE_ENV === 'production'
+          const parentDomain = isProd ? '.rehaulx.com' : undefined
+          cookiesToSet.forEach(({ name, value, options }) => {
+            const merged: CookieOptions = {
+              ...options,
+              domain: parentDomain ?? options?.domain,
+              sameSite: 'lax',
+            }
+            request.cookies.set(name, value)
+            // create a response placeholder so we can attach cookies with domain
+          })
           supabaseResponse = NextResponse.next({
             request,
           })
-          cookiesToSet.forEach(({ name, value, options }) => supabaseResponse.cookies.set(name, value, options))
+          cookiesToSet.forEach(({ name, value, options }) => {
+            const merged: CookieOptions = {
+              ...options,
+              domain: parentDomain ?? options?.domain,
+              sameSite: 'lax',
+            }
+            supabaseResponse.cookies.set(name, value, merged)
+          })
         },
       },
-    },
+    }
   )
 
-  // Refresh the session without forcing redirects
+  // refreshing the auth token
   await supabase.auth.getUser()
 
   return supabaseResponse

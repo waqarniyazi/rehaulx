@@ -5,6 +5,7 @@ import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
 import { Toaster as SonnerToaster } from "sonner"
 import { ThemeProvider } from "@/components/providers/theme-provider"
+import { AuthProvider } from "@/hooks/useAuth"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -25,11 +26,13 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange={false}>
-          <div className="min-h-screen bg-gradient-to-br from-background via-background to-background/80">
-            {children}
-            <Toaster />
-            <SonnerToaster theme="dark" position="top-right" richColors closeButton />
-          </div>
+          <AuthProvider>
+            <div className="min-h-screen bg-gradient-to-br from-background via-background to-background/80">
+              {children}
+              <Toaster />
+              <SonnerToaster theme="dark" position="top-right" richColors closeButton />
+            </div>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

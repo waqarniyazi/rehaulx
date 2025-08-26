@@ -89,16 +89,12 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
     setLoading(true)
     try {
       await signUp(email, password, firstName, lastName)
-      toast.success("Account created!", {
-        description: "Please check your email to verify your account",
-      })
+      // The success message is handled in the signUp function
       onClose()
       resetForm()
     } catch (error: any) {
       console.error("Sign up error:", error)
-      toast.error("Sign up failed", {
-        description: error.message || "Please try again",
-      })
+      // Error message is handled in the signUp function
     } finally {
       setLoading(false)
     }
