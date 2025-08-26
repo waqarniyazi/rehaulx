@@ -46,6 +46,7 @@
     "@supabase/ssr": "latest",
     "@supabase/supabase-js": "latest",
     "@types/file-saver": "^2.0.7",
+    "@vercel/analytics": "^1.5.0",
     "ai": "latest",
     "autoprefixer": "^10.4.20",
     "child_process": "latest",

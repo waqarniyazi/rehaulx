@@ -1,12 +1,15 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Header } from "@/components/Header/Header"
+import { Suspense } from "react"
 import { Footer } from "@/components/Footer/Footer"
 
 export default function NotFound() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950">
-      <Header />
+      <Suspense>
+        <Header />
+      </Suspense>
       
       <main className="flex-1 flex items-center justify-center px-4 py-20">
         <div className="max-w-md w-full text-center">

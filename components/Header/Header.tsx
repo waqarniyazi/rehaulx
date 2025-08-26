@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -22,13 +22,35 @@ export function Header() {
   const [showAuthModal, setShowAuthModal] = useState(false)
   const { user, signOut, loading } = useAuth()
   const searchParams = useSearchParams()
+  const [isAppHost, setIsAppHost] = useState(false)
 
-  const navigation = [
-    { name: "Home", href: "/" },
-    { name: "Repurpose", href: process.env.NODE_ENV === "development" ? "http://app.localhost:3000" : "https://app.rehaulx.com" },
-    { name: "About", href: "/about" },
-    { name: "Pricing", href: "/pricing" },
-  ]
+  const isProd = process.env.NODE_ENV === "production"
+  const mainBase = isProd ? "https://rehaulx.com" : "http://localhost:3000"
+  const appBase = isProd ? "https://app.rehaulx.com" : "http://app.localhost:3000"
+
+  useEffect(() => {
+    try {
+      const host = window.location.hostname
+      setIsAppHost(host === "app.localhost" || host.startsWith("app."))
+    } catch {}
+  }, [])
+
+  const navigation = useMemo(() => {
+    if (isAppHost) {
+      return [
+        { name: "Home", href: mainBase },
+        { name: "Repurpose", href: appBase },
+        { name: "About", href: `${mainBase}/about` },
+        { name: "Pricing", href: `${mainBase}/pricing` },
+      ]
+    }
+    return [
+      { name: "Home", href: "/" },
+      { name: "Repurpose", href: appBase },
+      { name: "About", href: "/about" },
+      { name: "Pricing", href: "/pricing" },
+    ]
+  }, [isAppHost, mainBase, appBase])
 
   const handleSignOut = async () => {
     await signOut()
@@ -70,7 +92,7 @@ export function Header() {
       <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-black/80 backdrop-blur-xl">
         <div className="container flex h-16 items-center">
           <div className="mr-4 hidden md:flex">
-            <Link href="/" className="mr-8 flex items-center space-x-2">
+              <Link href={isAppHost ? mainBase : "/"} className="mr-8 flex items-center space-x-2">
               <div className="flex items-center gap-2">
                 <div className="h-8 w-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
                   <Sparkles className="h-4 w-4 text-white" />
@@ -81,7 +103,7 @@ export function Header() {
               </div>
             </Link>
             <nav className="flex items-center space-x-8 text-sm font-medium">
-              {navigation.map((item) => (
+                  {navigation.map((item) => (
                 <Link
                   key={item.name}
                   href={item.href}
