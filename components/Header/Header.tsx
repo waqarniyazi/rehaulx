@@ -1,8 +1,7 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { Suspense, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -16,12 +15,36 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Menu, User, LogOut, LayoutDashboard, Sparkles } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
 import { AuthModal } from "@/components/auth/AuthModal"
+import { useSearchParams } from "next/navigation"
+
+function HeaderSearchParamsFX({
+  user,
+  loading,
+  onAuthModalOpen,
+}: {
+  user: any
+  loading: boolean
+  onAuthModalOpen: () => void
+}) {
+  const searchParams = useSearchParams()
+
+  // Auto-open auth modal when ?auth=1 is in the URL (CTA-driven login)
+  useEffect(() => {
+    const shouldOpen = searchParams.get("auth") === "1"
+    if (shouldOpen && !user && !loading) {
+      onAuthModalOpen()
+    }
+  }, [searchParams, user, loading, onAuthModalOpen])
+
+  // Redirect handling is performed inside HeaderSearchParamsFX
+
+  return null
+}
 
 export function Header() {
   const [isOpen, setIsOpen] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const { user, signOut, loading } = useAuth()
-  const searchParams = useSearchParams()
   const [isAppHost, setIsAppHost] = useState(false)
 
   const isProd = process.env.NODE_ENV === "production"
@@ -56,14 +79,6 @@ export function Header() {
     await signOut()
   }
 
-  // Auto-open auth modal when ?auth=1 is in the URL (CTA-driven login)
-  useEffect(() => {
-    const shouldOpen = searchParams.get("auth") === "1"
-    if (shouldOpen && !user && !loading) {
-      setShowAuthModal(true)
-    }
-  }, [searchParams, user, loading])
-
   // If the user becomes signed in, close modal and strip flag
   useEffect(() => {
     if (user && showAuthModal) {
@@ -76,16 +91,7 @@ export function Header() {
     }
   }, [user, showAuthModal])
 
-  // After sign-in, honor a ?redirect= param if present (cross-subdomain handoff)
-  useEffect(() => {
-    if (!user) return
-    const redirect = searchParams.get("redirect")
-    if (redirect) {
-      try {
-        window.location.href = redirect
-      } catch {}
-    }
-  }, [user, searchParams])
+  // After sign-in redirect handled by HeaderSearchParamsFX
 
   return (
     <>
@@ -229,6 +235,13 @@ export function Header() {
           </div>
         </div>
       </header>
+      <Suspense>
+        <HeaderSearchParamsFX
+          user={user}
+          loading={loading}
+          onAuthModalOpen={() => setShowAuthModal(true)}
+        />
+      </Suspense>
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => {
