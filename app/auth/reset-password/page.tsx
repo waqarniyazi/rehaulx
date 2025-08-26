@@ -7,10 +7,9 @@ import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
-import { Eye, EyeOff, CheckCircle, XCircle } from "lucide-react"
+import { Eye, EyeOff, CheckCircle, XCircle, Lock, Loader2 } from "lucide-react"
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState("")
@@ -80,15 +79,28 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-2xl text-center">Reset Your Password</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleResetPassword} className="space-y-4">
+    <div className="min-h-screen bg-black flex items-center justify-center p-4">
+      {/* Background effects */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-500/20 rounded-full blur-3xl" />
+      </div>
+
+      <div className="relative w-full max-w-md">
+        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8">
+          <div className="text-center mb-8">
+            <div className="mx-auto mb-4 h-12 w-12 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-xl flex items-center justify-center">
+              <Lock className="h-6 w-6 text-blue-400" />
+            </div>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-white via-white/90 to-white/70 bg-clip-text text-transparent">
+              Reset Your Password
+            </h1>
+            <p className="text-white/60 mt-2">Create a new secure password for your account</p>
+          </div>
+
+          <form onSubmit={handleResetPassword} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="password">New Password</Label>
+              <Label htmlFor="password" className="text-white/80">New Password</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -97,13 +109,13 @@ export default function ResetPasswordPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="pr-10"
+                  className="h-11 pr-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-white/30 focus:ring-white/10"
                 />
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-white/60 hover:text-white"
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -112,7 +124,7 @@ export default function ResetPasswordPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm New Password</Label>
+              <Label htmlFor="confirmPassword" className="text-white/80">Confirm New Password</Label>
               <Input
                 id="confirmPassword"
                 type="password"
@@ -120,22 +132,23 @@ export default function ResetPasswordPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
+                className="h-11 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-white/30 focus:ring-white/10"
               />
             </div>
 
             {/* Password Requirements */}
             {password && (
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Password Requirements:</p>
-                <div className="space-y-1">
+              <div className="space-y-3 p-4 rounded-xl bg-white/5 border border-white/10">
+                <p className="text-sm font-medium text-white/80">Password Requirements:</p>
+                <div className="space-y-2">
                   {passwordRequirements.map((req, index) => (
                     <div key={index} className="flex items-center gap-2 text-sm">
                       {req.test(password) ? (
-                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <CheckCircle className="h-4 w-4 text-green-400" />
                       ) : (
-                        <XCircle className="h-4 w-4 text-muted-foreground" />
+                        <XCircle className="h-4 w-4 text-white/40" />
                       )}
-                      <span className={req.test(password) ? "text-green-500" : "text-muted-foreground"}>
+                      <span className={req.test(password) ? "text-green-400" : "text-white/60"}>
                         {req.label}
                       </span>
                     </div>
@@ -146,24 +159,42 @@ export default function ResetPasswordPage() {
 
             {/* Password Match Indicator */}
             {confirmPassword && (
-              <div className="flex items-center gap-2 text-sm">
+              <div className="flex items-center gap-2 text-sm p-3 rounded-lg bg-white/5">
                 {passwordsMatch ? (
-                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <CheckCircle className="h-4 w-4 text-green-400" />
                 ) : (
-                  <XCircle className="h-4 w-4 text-red-500" />
+                  <XCircle className="h-4 w-4 text-red-400" />
                 )}
-                <span className={passwordsMatch ? "text-green-500" : "text-red-500"}>
+                <span className={passwordsMatch ? "text-green-400" : "text-red-400"}>
                   Passwords {passwordsMatch ? "match" : "do not match"}
                 </span>
               </div>
             )}
 
-            <Button type="submit" disabled={loading || !isPasswordStrong || !passwordsMatch} className="w-full">
-              {loading ? "Updating Password..." : "Update Password"}
+            <Button 
+              type="submit" 
+              disabled={loading || !isPasswordStrong || !passwordsMatch} 
+              className="w-full h-11 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white border-0 shadow-2xl shadow-blue-500/25 hover:scale-105 transition-all duration-300"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Updating Password...
+                </>
+              ) : (
+                <>
+                  <Lock className="mr-2 h-4 w-4" />
+                  Update Password
+                </>
+              )}
             </Button>
           </form>
-        </CardContent>
-      </Card>
+
+          <div className="text-center text-sm text-white/40 mt-6">
+            After updating, you'll be redirected to sign in with your new password
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

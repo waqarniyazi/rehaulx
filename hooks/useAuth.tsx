@@ -21,6 +21,7 @@ interface AuthContextType {
   resetPassword: (email: string) => Promise<void>
   signInWithOAuth: (provider: 'google' | 'github') => Promise<void>
   signInWithMagicLink: (email: string) => Promise<void>
+  checkEmailExists: (email: string) => Promise<boolean>
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -32,6 +33,7 @@ const AuthContext = createContext<AuthContextType>({
   resetPassword: async () => {},
   signInWithOAuth: async () => {},
   signInWithMagicLink: async () => {},
+  checkEmailExists: async () => false,
 })
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -105,7 +107,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithOAuth = async (provider: 'google' | 'github') => {
     try {
       setLoading(true)
-  const redirectTo = `${window.location.origin}/auth/callback`
+      
+      // Get the proper redirect URL based on environment
+      const getRedirectTo = () => {
+        if (typeof window !== 'undefined') {
+          const { protocol, hostname, port } = window.location
+          const baseUrl = `${protocol}//${hostname}${port ? `:${port}` : ''}`
+          return `${baseUrl}/auth/callback`
+        }
+        return process.env.NODE_ENV === 'production' 
+          ? 'https://rehaulx.com/auth/callback'
+          : 'http://localhost:3000/auth/callback'
+      }
+      
+      const redirectTo = getRedirectTo()
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
@@ -128,7 +143,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithMagicLink = async (email: string) => {
     try {
       setLoading(true)
-  const redirectTo = `${window.location.origin}/auth/callback`
+      
+      // Get the proper redirect URL based on environment
+      const getRedirectTo = () => {
+        if (typeof window !== 'undefined') {
+          const { protocol, hostname, port } = window.location
+          const baseUrl = `${protocol}//${hostname}${port ? `:${port}` : ''}`
+          return `${baseUrl}/auth/callback`
+        }
+        return process.env.NODE_ENV === 'production' 
+          ? 'https://rehaulx.com/auth/callback'
+          : 'http://localhost:3000/auth/callback'
+      }
+      
+      const redirectTo = getRedirectTo()
       const { error } = await supabase.auth.signInWithOtp({
         email: email.trim(),
         options: { emailRedirectTo: redirectTo },
@@ -158,18 +186,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   ) => {
     try {
       setLoading(true)
-  const { data, error } = await supabase.auth.signUp({
+      
+      // Get the proper redirect URL based on environment
+      const getRedirectTo = () => {
+        if (typeof window !== 'undefined') {
+          const { protocol, hostname, port } = window.location
+          const baseUrl = `${protocol}//${hostname}${port ? `:${port}` : ''}`
+          return `${baseUrl}/auth/callback`
+        }
+        return process.env.NODE_ENV === 'production' 
+          ? 'https://rehaulx.com/auth/callback'
+          : 'http://localhost:3000/auth/callback'
+      }
+
+      const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: {
-          // Ensure confirmation links return to the same origin
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          // Ensure confirmation links return to the correct origin
+          emailRedirectTo: getRedirectTo(),
           data: {
             first_name: firstName.trim(),
             last_name: lastName.trim(),
             full_name: `${firstName.trim()} ${lastName.trim()}`,
-    company: company?.trim() || undefined,
-    role: role?.trim() || undefined,
+            company: company?.trim() || undefined,
+            role: role?.trim() || undefined,
           },
         },
       })
@@ -232,8 +273,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const resetPassword = async (email: string) => {
     try {
+      // Get the proper redirect URL based on environment
+      const getRedirectTo = () => {
+        if (typeof window !== 'undefined') {
+          const { protocol, hostname, port } = window.location
+          const baseUrl = `${protocol}//${hostname}${port ? `:${port}` : ''}`
+          return `${baseUrl}/auth/reset-password`
+        }
+        return process.env.NODE_ENV === 'production' 
+          ? 'https://rehaulx.com/auth/reset-password'
+          : 'http://localhost:3000/auth/reset-password'
+      }
+
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
+        redirectTo: getRedirectTo(),
       })
 
       if (error) {
@@ -252,8 +305,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const checkEmailExists = async (email: string): Promise<boolean> => {
+    try {
+      const response = await fetch('/api/check-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: email.trim() }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok')
+      }
+
+      const { exists, error } = await response.json()
+      
+      if (error) {
+        throw new Error(error)
+      }
+
+      return exists
+    } catch (error: any) {
+      console.error('Check email error:', error)
+      // If there's an error, we'll be conservative and assume the email might exist
+      // to prevent accidental account creation attempts
+      return false
+    }
+  }
+
   return (
-  <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut, resetPassword, signInWithOAuth, signInWithMagicLink }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut, resetPassword, signInWithOAuth, signInWithMagicLink, checkEmailExists }}>
       {children}
     </AuthContext.Provider>
   )

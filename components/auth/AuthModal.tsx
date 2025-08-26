@@ -27,10 +27,11 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState("signin")
-  const { signIn, signUp, resetPassword, signInWithOAuth, signInWithMagicLink } = useAuth()
+  const { signIn, signUp, resetPassword, signInWithOAuth, signInWithMagicLink, checkEmailExists } = useAuth()
   const [signupStep, setSignupStep] = useState<1 | 2>(1)
   const [showForgot, setShowForgot] = useState(false)
   const [showCheckEmail, setShowCheckEmail] = useState(false)
+  const [emailCheckLoading, setEmailCheckLoading] = useState(false)
 
   // Password strength validation
   const passwordRequirements = [
@@ -84,7 +85,24 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
         toast.error("Password too weak", { description: "Please create a stronger password" })
         return
       }
-      setSignupStep(2)
+      
+      // Check if email already exists
+      setEmailCheckLoading(true)
+      try {
+        const emailExists = await checkEmailExists(email)
+        if (emailExists) {
+          toast.error("Account already exists", { 
+            description: "An account with this email already exists. Try signing in instead." 
+          })
+          setActiveTab("signin")
+          return
+        }
+        setSignupStep(2)
+      } catch (error) {
+        toast.error("Error checking email", { description: "Please try again" })
+      } finally {
+        setEmailCheckLoading(false)
+      }
       return
     }
     if (!firstName || !lastName) {
@@ -179,8 +197,8 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
             <TabsContent value="signin" className="space-y-4 mt-6">
               {/* Social logins */}
               <div className="grid grid-cols-2 gap-3">
-                <Button onClick={() => signInWithOAuth('google')} className="bg-white text-black hover:bg-white/90">
-                  <span className="mr-2 h-4 w-4 rounded-sm bg-[#4285F4] text-white flex items-center justify-center text-[10px]">G</span>
+                <Button onClick={() => signInWithOAuth('google')} className="bg-[#24292e] text-white hover:bg-[#24292e]/90">
+                  <span className="mr-2 h-4 w-4 rounded-sm bg-white/10 text-white flex items-center justify-center text-[10px]">G</span>
                   Google
                 </Button>
                 <Button onClick={() => signInWithOAuth('github')} className="bg-[#24292e] text-white hover:bg-[#24292e]/90">
@@ -248,7 +266,16 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                         </div>
                       )}
                     </div>
-                    <Button type="submit" disabled={loading || !isPasswordStrong} className="w-full h-11 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white border-0">Continue</Button>
+                    <Button type="submit" disabled={loading || emailCheckLoading || !isPasswordStrong} className="w-full h-11 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white border-0">
+                      {emailCheckLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Checking email...
+                        </>
+                      ) : (
+                        "Continue"
+                      )}
+                    </Button>
                   </>
                 ) : (
                   <>
