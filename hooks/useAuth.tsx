@@ -105,7 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithOAuth = async (provider: 'google' | 'github') => {
     try {
       setLoading(true)
-      const redirectTo = `${window.location.origin}/auth/callback`
+  const redirectTo = `${window.location.origin}/auth/callback`
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
@@ -128,7 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithMagicLink = async (email: string) => {
     try {
       setLoading(true)
-      const redirectTo = `${window.location.origin}/auth/callback`
+  const redirectTo = `${window.location.origin}/auth/callback`
       const { error } = await supabase.auth.signInWithOtp({
         email: email.trim(),
         options: { emailRedirectTo: redirectTo },
@@ -162,6 +162,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email: email.trim(),
         password,
         options: {
+          // Ensure confirmation links return to the same origin
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
             first_name: firstName.trim(),
             last_name: lastName.trim(),

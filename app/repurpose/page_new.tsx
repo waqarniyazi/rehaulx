@@ -36,8 +36,8 @@ export default function RepurposePage() {
     if (!loading && !user && !redirecting) {
       setRedirecting(true)
       const redirectUrl = process.env.NODE_ENV === 'development' 
-        ? 'http://localhost:3000/auth/callback?redirect=/repurpose'
-        : 'https://rehaulx.com/auth/callback?redirect=/repurpose'
+  ? 'http://localhost:3000/auth/callback?redirect=/repurpose'
+  : 'https://rehaulx.com/auth/callback?redirect=/repurpose'
       
       // Use window.location.href for cross-domain redirect
       setTimeout(() => {

@@ -14,13 +14,13 @@ export async function GET(request: Request) {
     if (!error) {
       const forwardedHost = request.headers.get('x-forwarded-host')
       const isLocalEnv = process.env.NODE_ENV === 'development'
-      
-      // Handle redirect parameter for repurpose page
+
+      // If explicit redirect to repurpose, send there on the same host
       if (redirect === '/repurpose') {
-        const appUrl = isLocalEnv ? 'http://app.localhost:3000' : 'https://app.rehaulx.com'
-        return NextResponse.redirect(appUrl)
+        const target = `${origin}/repurpose`
+        return NextResponse.redirect(target)
       }
-      
+
       if (isLocalEnv) {
         return NextResponse.redirect(`${origin}${next}`)
       } else if (forwardedHost) {
