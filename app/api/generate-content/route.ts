@@ -1,9 +1,17 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { cookies } from "next/headers"
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
 import { getLLMProvider } from "@/lib/llm"
+import { ceilMinutes, debitMinutes, getMinutesBalance } from "@/lib/billing"
 
 export async function POST(request: NextRequest) {
   try {
-    const { videoUrl, contentType, userId, transcript, keyFrames } = await request.json()
+  const { videoUrl, contentType, userId: userIdFromBody, transcript, keyFrames } = await request.json()
+
+  // Resolve authenticated user (ignore userId from body for security)
+  const sb = createRouteHandlerClient({ cookies })
+  const { data: { user } } = await sb.auth.getUser()
+  const userId = user?.id || userIdFromBody // fallback only for dev/testing when auth not present
 
     // Require transcript for content generation
     if (!transcript || !Array.isArray(transcript) || transcript.length === 0) {
@@ -11,6 +19,27 @@ export async function POST(request: NextRequest) {
         error: "Transcript is required for content generation", 
         details: "Cannot generate content without video transcript. Please ensure the video has captions or transcript available."
       }, { status: 400 })
+    }
+
+    // Estimate minutes needed from transcript duration (fallback by words if duration missing)
+    const lastSeg = transcript[transcript.length - 1]
+    const estSeconds = typeof lastSeg?.start === 'number' && typeof lastSeg?.duration === 'number'
+      ? Math.max(1, Math.round(lastSeg.start + lastSeg.duration))
+      : Math.round(transcript.reduce((acc: number, seg: any) => acc + ((seg.duration as number) || 0), 0))
+    const minutesNeeded = ceilMinutes(estSeconds)
+
+    // If user present, enforce minutes balance
+    if (userId) {
+      const remaining = await getMinutesBalance(userId)
+      if (remaining < minutesNeeded) {
+        return NextResponse.json({
+          error: "Insufficient minutes",
+          details: `You need ${minutesNeeded} minutes for this generation but only have ${remaining}.` ,
+          minutesNeeded,
+          remaining,
+          upgrade: true,
+        }, { status: 402 })
+      }
     }
 
     if (!contentType) {
@@ -130,6 +159,18 @@ export async function POST(request: NextRequest) {
               })}\n\n`,
             ),
           )
+
+          // Debit minutes after successful completion (fire-and-forget)
+          try {
+            if (userId) {
+              await debitMinutes(userId, minutesNeeded, 'content_generation', undefined, {
+                seconds: estSeconds,
+                contentType,
+              })
+            }
+          } catch (e) {
+            console.error('Failed to debit minutes:', e)
+          }
 
           controller.close()
         } catch (error) {

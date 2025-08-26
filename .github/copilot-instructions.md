@@ -86,10 +86,13 @@ Sign Up → Email Verification → Sign In → Protected Routes
 ```
 
 ### Development Setup
+**Always use pnpm as the preferred package manager for consistency and performance.**
+
 ```bash
-pnpm install
+pnpm install                           # Install main app dependencies
 pnpm run dev                           # Main app on :3000
-cd video-service && npm start          # Video service on :3001
+cd video-service && pnpm install      # Install video service dependencies  
+cd video-service && pnpm start        # Video service on :3001
 
 # Test app subdomain locally
 # Add to /etc/hosts: 127.0.0.1 app.localhost
@@ -209,20 +212,23 @@ const [videoInfo, setVideoInfo] = useState<VideoInfo | null>(null)
 
 ```bash
 # Check video service health
-curl https://rehaulx-video-xyz.herokuapp.com/health
+curl https://rehaulx-video-145108ad74de.herokuapp.com/health
 
 # Monitor Heroku logs
 heroku logs --tail --app rehaulx-video
 
-# Test video analysis locally
-curl -X POST http://localhost:3001/api/analyze-video \
+# Test video analysis (now working with duration extraction)
+curl -X POST https://rehaulx-video-145108ad74de.herokuapp.com/api/analyze-video \
   -H "Content-Type: application/json" \
-  -d '{"url": "https://youtube.com/watch?v=..."}'
+  -d '{"url": "https://youtube.com/watch?v=dQw4w9WgXcQ"}' | jq '.videoInfo | {title, duration, author}'
 
 # Test transcript extraction
 curl -X POST http://localhost:3000/api/transcript \
   -H "Content-Type: application/json" \
   -d '{"videoId": "dQw4w9WgXcQ"}'
+
+# Verify Heroku environment variables
+heroku config --app rehaulx-video
 ```
 
 ## Key Files

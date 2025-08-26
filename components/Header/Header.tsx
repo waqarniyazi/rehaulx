@@ -45,6 +45,7 @@ export function Header() {
   const [isOpen, setIsOpen] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const { user, signOut, loading } = useAuth()
+  const [minutesRemaining, setMinutesRemaining] = useState<number | null>(null)
   const [isAppHost] = useState(false)
 
   const navigation = useMemo(() => {
@@ -73,6 +74,20 @@ export function Header() {
   }, [user, showAuthModal])
 
   // After sign-in redirect handled by HeaderSearchParamsFX
+  useEffect(() => {
+    let cancelled = false
+    async function fetchMinutes() {
+      try {
+        if (!user) { setMinutesRemaining(null); return }
+        const res = await fetch('/api/minutes', { cache: 'no-store' })
+        if (!res.ok) return
+        const data = await res.json()
+        if (!cancelled) setMinutesRemaining(typeof data.remaining === 'number' ? data.remaining : null)
+      } catch {}
+    }
+    fetchMinutes()
+    return () => { cancelled = true }
+  }, [user])
 
   return (
     <>
@@ -150,7 +165,12 @@ export function Header() {
               {user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-8 w-8 rounded-full hover:bg-white/10">
+                    <Button variant="ghost" className="relative h-8 w-auto rounded-full hover:bg-white/10 pl-2 pr-2 gap-2">
+                      {typeof minutesRemaining === 'number' && (
+                        <span className="text-xs text-white/80 bg-white/5 border border-white/10 rounded px-2 py-0.5">
+                          {minutesRemaining} min
+                        </span>
+                      )}
                       <Avatar className="h-8 w-8">
                         <AvatarImage src={user.user_metadata?.avatar_url || "/placeholder.svg"} alt={user.email || ""} />
                         <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white">
