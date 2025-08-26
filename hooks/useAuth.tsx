@@ -9,9 +9,18 @@ interface AuthContextType {
   user: User | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, password: string, firstName: string, lastName: string) => Promise<void>
+  signUp: (
+    email: string,
+    password: string,
+    firstName: string,
+    lastName: string,
+    company?: string,
+    role?: string
+  ) => Promise<void>
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<void>
+  signInWithOAuth: (provider: 'google' | 'github') => Promise<void>
+  signInWithMagicLink: (email: string) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -21,6 +30,8 @@ const AuthContext = createContext<AuthContextType>({
   signUp: async () => {},
   signOut: async () => {},
   resetPassword: async () => {},
+  signInWithOAuth: async () => {},
+  signInWithMagicLink: async () => {},
 })
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -91,10 +102,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const signUp = async (email: string, password: string, firstName: string, lastName: string) => {
+  const signInWithOAuth = async (provider: 'google' | 'github') => {
     try {
       setLoading(true)
-      const { data, error } = await supabase.auth.signUp({
+      const redirectTo = `${window.location.origin}/auth/callback`
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo,
+        },
+      })
+      if (error) throw error
+      // Redirect handled by Supabase
+    } catch (error: any) {
+      console.error('OAuth sign in error:', error)
+      toast.error('Sign in failed', {
+        description: error.message || 'Could not continue with provider.',
+      })
+      throw error
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const signInWithMagicLink = async (email: string) => {
+    try {
+      setLoading(true)
+      const redirectTo = `${window.location.origin}/auth/callback`
+      const { error } = await supabase.auth.signInWithOtp({
+        email: email.trim(),
+        options: { emailRedirectTo: redirectTo },
+      })
+      if (error) throw error
+      toast.success('Check your email', {
+        description: 'We sent you a secure sign-in link.',
+      })
+    } catch (error: any) {
+      console.error('Magic link error:', error)
+      toast.error('Magic link failed', {
+        description: error.message || 'Could not send sign-in link.',
+      })
+      throw error
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const signUp = async (
+    email: string,
+    password: string,
+    firstName: string,
+    lastName: string,
+    company?: string,
+    role?: string
+  ) => {
+    try {
+      setLoading(true)
+  const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: {
@@ -102,6 +166,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             first_name: firstName.trim(),
             last_name: lastName.trim(),
             full_name: `${firstName.trim()} ${lastName.trim()}`,
+    company: company?.trim() || undefined,
+    role: role?.trim() || undefined,
           },
         },
       })
@@ -185,7 +251,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut, resetPassword }}>
+  <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut, resetPassword, signInWithOAuth, signInWithMagicLink }}>
       {children}
     </AuthContext.Provider>
   )
