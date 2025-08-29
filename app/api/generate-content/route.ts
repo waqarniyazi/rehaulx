@@ -1,15 +1,14 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { cookies } from "next/headers"
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
+import { createClient } from "@/lib/supabase/server"
 import { getLLMProvider } from "@/lib/llm"
-import { ceilMinutes, debitMinutes, getMinutesBalance } from "@/lib/billing"
+import { ceilMinutes, deductUserMinutes, getUserMinutesBalance } from "@/lib/billing"
 
 export async function POST(request: NextRequest) {
   try {
   const { videoUrl, contentType, userId: userIdFromBody, transcript, keyFrames } = await request.json()
 
   // Resolve authenticated user (ignore userId from body for security)
-  const sb = createRouteHandlerClient({ cookies })
+  const sb = await createClient()
   const { data: { user } } = await sb.auth.getUser()
   const userId = user?.id || userIdFromBody // fallback only for dev/testing when auth not present
 
@@ -30,7 +29,8 @@ export async function POST(request: NextRequest) {
 
     // If user present, enforce minutes balance
     if (userId) {
-      const remaining = await getMinutesBalance(userId)
+      const usage = await getUserMinutesBalance(userId)
+      const remaining = usage?.remaining || 0
       if (remaining < minutesNeeded) {
         return NextResponse.json({
           error: "Insufficient minutes",
@@ -160,13 +160,17 @@ export async function POST(request: NextRequest) {
             ),
           )
 
-          // Debit minutes after successful completion (fire-and-forget)
+          // Deduct minutes after successful completion (fire-and-forget)
           try {
             if (userId) {
-              await debitMinutes(userId, minutesNeeded, 'content_generation', undefined, {
-                seconds: estSeconds,
-                contentType,
-              })
+              await deductUserMinutes(
+                userId,
+                minutesNeeded,
+                undefined,
+                `content_generation:${contentType}`,
+                estSeconds,
+                'content-generation'
+              )
             }
           } catch (e) {
             console.error('Failed to debit minutes:', e)

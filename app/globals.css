@@ -24,6 +24,14 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
     --radius: 0.75rem;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
   .dark {
@@ -46,6 +54,37 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 224.3 76.3% 94.1%;
+  /* ReHaulX sidebar palette: deep slate with blue-violet accents */
+  --sidebar-background: 222 22% 9%;      /* near-black with a hint of blue */
+  --sidebar-foreground: 210 40% 96%;     /* high-contrast text */
+  --sidebar-primary: 226 71% 55%;        /* brand blue */
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 230 20% 16%;         /* hover/active surface */
+  --sidebar-accent-foreground: 210 40% 98%;
+  --sidebar-border: 230 18% 18%;         /* subtle borders */
+  --sidebar-ring: 255 85% 65%;           /* ring with blue-violet tint */
+  }
+
+  /* shadcn sidebar theme to match ReHaulX obsidian black */
+  :root {
+    --sidebar: hsl(0 0% 100% / 0.03);
+    --sidebar-foreground: hsl(0 0% 98%);
+    --sidebar-primary: hsl(217.2 91.2% 59.8%);
+    --sidebar-primary-foreground: hsl(0 0% 100%);
+    --sidebar-accent: hsl(0 0% 100% / 0.06);
+    --sidebar-accent-foreground: hsl(0 0% 98%);
+    --sidebar-border: hsl(0 0% 100% / 0.08);
+    --sidebar-ring: hsl(217.2 91.2% 59.8%);
+  }
+  .dark {
+    --sidebar: hsl(0 0% 0% / 0.6);
+    --sidebar-foreground: hsl(0 0% 98%);
+    --sidebar-primary: hsl(217.2 91.2% 59.8%);
+    --sidebar-primary-foreground: hsl(0 0% 100%);
+    --sidebar-accent: hsl(0 0% 100% / 0.06);
+    --sidebar-accent-foreground: hsl(0 0% 98%);
+    --sidebar-border: hsl(0 0% 100% / 0.1);
+    --sidebar-ring: hsl(217.2 91.2% 59.8%);
   }
 }
 
@@ -63,6 +102,25 @@
   .text-balance {
     text-wrap: balance;
   }
+  .animate-gradient-x {
+    animation: gradient-x 5s ease infinite;
+  }
+  .hover-aurora {
+    position: relative;
+  }
+  .hover-aurora::before {
+    content: "";
+    position: absolute;
+    inset: -4px;
+    border-radius: 12px;
+    background: radial-gradient(120px 80px at var(--mx,50%) -20%, rgba(59,130,246,0.28), transparent 60%),
+                radial-gradient(140px 90px at calc(100% - var(--mx,50%)) 120%, rgba(168,85,247,0.22), transparent 60%);
+    filter: blur(18px);
+    opacity: 0;
+    transition: opacity 300ms ease;
+    pointer-events: none;
+  }
+  .hover-aurora:hover::before { opacity: 1; }
 }
 
 /* Custom gradient backgrounds */
@@ -97,6 +155,12 @@
 /* Smooth scrolling */
 html {
   scroll-behavior: smooth;
+}
+
+@keyframes gradient-x {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 /* Custom scrollbar */

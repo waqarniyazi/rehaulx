@@ -16,28 +16,41 @@ export async function updateSession(request: NextRequest) {
         },
         setAll(cookiesToSet) {
           const isProd = process.env.NODE_ENV === 'production'
-          const parentDomain = isProd ? '.rehaulx.com' : undefined
+          const host = request.headers.get('host') || ''
+          const isRehaulxDomain = host.includes('rehaulx.com')
+          
           cookiesToSet.forEach(({ name, value, options }) => {
             const merged: CookieOptions = {
               ...options,
-              domain: parentDomain ?? options?.domain,
+              domain: isProd && isRehaulxDomain ? '.rehaulx.com' : options?.domain,
               sameSite: 'lax',
+              secure: isProd,
+              path: '/',
             }
             request.cookies.set(name, value)
-            // create a response placeholder so we can attach cookies with domain
           })
+          
           supabaseResponse = NextResponse.next({
             request,
           })
+          
           cookiesToSet.forEach(({ name, value, options }) => {
             const merged: CookieOptions = {
               ...options,
-              domain: parentDomain ?? options?.domain,
+              domain: isProd && isRehaulxDomain ? '.rehaulx.com' : options?.domain,
               sameSite: 'lax',
+              secure: isProd,
+              path: '/',
             }
             supabaseResponse.cookies.set(name, value, merged)
           })
         },
+      },
+      auth: {
+        flowType: 'pkce',
+        autoRefreshToken: true,
+        detectSessionInUrl: false,
+        persistSession: true,
       },
     }
   )

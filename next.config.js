@@ -15,6 +15,9 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  env: {
+    NEXT_PUBLIC_RAZORPAY_KEY_ID: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+  },
   experimental: {
     serverActions: {
       allowedOrigins: ["localhost:3000"],

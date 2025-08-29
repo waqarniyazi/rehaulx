@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "atDirectives": [
+    {
+      "name": "tailwind",
+      "description": "Tailwind CSS entrypoint (base, components, utilities)",
+      "references": []
+    },
+    {
+      "name": "apply",
+      "description": "Tailwind CSS apply utility",
+      "references": []
+    }
+  ]
+}

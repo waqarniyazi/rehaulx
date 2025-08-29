@@ -45,7 +45,11 @@ export function Header() {
   const [isOpen, setIsOpen] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const { user, signOut, loading } = useAuth()
-  const [minutesRemaining, setMinutesRemaining] = useState<number | null>(null)
+  const [minutesData, setMinutesData] = useState<{
+    remaining: number
+    allocated: number
+    isFree: boolean
+  } | null>(null)
   const [isAppHost] = useState(false)
 
   const navigation = useMemo(() => {
@@ -76,13 +80,32 @@ export function Header() {
   // After sign-in redirect handled by HeaderSearchParamsFX
   useEffect(() => {
     let cancelled = false
+    async function ensureMonthlyFree() {
+      try {
+        if (!user) return
+        const key = `free-minutes-granted-${new Date().getFullYear()}-${new Date().getMonth()}`
+        if (localStorage.getItem(key)) return
+        const res = await fetch('/api/free-minutes/grant-if-needed', { method: 'POST' })
+        if (res.ok) localStorage.setItem(key, '1')
+      } catch {}
+    }
     async function fetchMinutes() {
       try {
-        if (!user) { setMinutesRemaining(null); return }
+        if (!user) { 
+          setMinutesData(null)
+          return 
+        }
+        await ensureMonthlyFree()
         const res = await fetch('/api/minutes', { cache: 'no-store' })
         if (!res.ok) return
         const data = await res.json()
-        if (!cancelled) setMinutesRemaining(typeof data.remaining === 'number' ? data.remaining : null)
+        if (!cancelled) {
+          setMinutesData({
+            remaining: data.remaining || 0,
+            allocated: data.allocated || 0,
+            isFree: !data.subscription
+          })
+        }
       } catch {}
     }
     fetchMinutes()
@@ -95,14 +118,13 @@ export function Header() {
         <div className="container flex h-16 items-center">
           <div className="mr-4 hidden md:flex">
               <Link href={"/"} className="mr-8 flex items-center space-x-2">
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                  <Sparkles className="h-4 w-4 text-white" />
+                <div className="flex items-center gap-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/favicon/android-chrome-192x192.png" alt="ReHaulX" className="h-8 w-8 rounded-lg" />
+                  <span className="font-bold text-xl bg-gradient-to-r from-white to-white/80 bg-clip-text text-transparent">
+                    ReHaulX
+                  </span>
                 </div>
-                <span className="font-bold text-xl bg-gradient-to-r from-white to-white/80 bg-clip-text text-transparent">
-                  ReHaulX
-                </span>
-              </div>
             </Link>
             <nav className="flex items-center space-x-8 text-sm font-medium">
                   {navigation.map((item) => (
@@ -130,9 +152,8 @@ export function Header() {
             </SheetTrigger>
             <SheetContent side="left" className="pr-0 bg-black/95 backdrop-blur-xl border-white/10">
               <Link href="/" className="flex items-center gap-2" onClick={() => setIsOpen(false)}>
-                <div className="h-8 w-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                  <Sparkles className="h-4 w-4 text-white" />
-                </div>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/favicon/android-chrome-192x192.png" alt="ReHaulX" className="h-8 w-8 rounded-lg" />
                 <span className="font-bold text-xl text-white">ReHaulX</span>
               </Link>
               <div className="my-4 h-[calc(100vh-8rem)] pb-10 pl-6">
@@ -166,10 +187,21 @@ export function Header() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-8 w-auto rounded-full hover:bg-white/10 pl-2 pr-2 gap-2">
-                      {typeof minutesRemaining === 'number' && (
-                        <span className="text-xs text-white/80 bg-white/5 border border-white/10 rounded px-2 py-0.5">
-                          {minutesRemaining} min
-                        </span>
+                      {minutesData && (
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className={`px-2 py-1 rounded-full border ${
+                            minutesData.remaining <= 10 
+                              ? 'bg-red-500/20 text-red-400 border-red-500/30' 
+                              : minutesData.isFree
+                                ? 'bg-green-500/20 text-green-400 border-green-500/30'
+                                : 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                          }`}>
+                            {minutesData.remaining} / {minutesData.allocated} min
+                          </span>
+                          {minutesData.isFree && (
+                            <span className="text-white/60 text-xs">Free</span>
+                          )}
+                        </div>
                       )}
                       <Avatar className="h-8 w-8">
                         <AvatarImage src={user.user_metadata?.avatar_url || "/placeholder.svg"} alt={user.email || ""} />
@@ -189,6 +221,22 @@ export function Header() {
                       <div className="flex flex-col space-y-1 leading-none">
                         <p className="font-medium text-white">{user.user_metadata?.full_name || user.email}</p>
                         <p className="text-xs text-white/60">{user.email}</p>
+                        {minutesData && (
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className={`text-xs px-2 py-0.5 rounded border ${
+                              minutesData.remaining <= 10 
+                                ? 'bg-red-500/20 text-red-400 border-red-500/30' 
+                                : minutesData.isFree
+                                  ? 'bg-green-500/20 text-green-400 border-green-500/30'
+                                  : 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                            }`}>
+                              {minutesData.remaining} / {minutesData.allocated} minutes
+                            </span>
+                            {minutesData.isFree && (
+                              <span className="text-xs text-white/50">Free Plan</span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <DropdownMenuSeparator className="bg-white/10" />

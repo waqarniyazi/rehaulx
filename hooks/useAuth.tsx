@@ -121,11 +121,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       const redirectTo = getRedirectTo()
+      const providerOptions: any = { redirectTo }
+      // Ensure we request proper scopes so we get name and avatar back
+      if (provider === 'github') {
+        providerOptions.scopes = 'read:user user:email'
+      } else if (provider === 'google') {
+        providerOptions.queryParams = {
+          // default scopes include openid profile email; send explicitly to be safe
+          access_type: 'offline',
+          prompt: 'consent',
+        }
+        providerOptions.scopes = 'openid profile email'
+      }
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
-        options: {
-          redirectTo,
-        },
+        options: providerOptions,
       })
       if (error) throw error
       // Redirect handled by Supabase

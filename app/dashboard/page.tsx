@@ -1,507 +1,260 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useEffect, useMemo, useState } from "react"
+import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import {
-  FileText,
-  Linkedin,
-  Twitter,
-  Calendar,
-  Edit,
-  Trash2,
-  Plus,
-  TrendingUp,
-  Users,
-  Clock,
-  Sparkles,
-  Video,
-  BarChart3,
-  Target,
-  Zap,
-} from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
-import { Header } from "@/components/Header/Header"
-import { Footer } from "@/components/Footer/Footer"
-import Link from "next/link"
-import { toast } from "sonner"
+import Script from "next/script"
+import { Breadcrumbs } from "@/components/Breadcrumbs"
 
-interface Project {
+type MinutesRes = {
+  remaining: number
+  allocated: number
+  used: number
+  cycle_end: string | null
+  subscription: any
+  upgrade_nudge?: { show: boolean; reason: string; recommendedPlan?: string }
+}
+
+type Project = {
   id: string
   title: string
-  contentType: string
-  createdAt: string
-  videoUrl: string
-  thumbnail: string
-  status: "completed" | "draft"
-  views?: number
-  engagement?: number
+  content_type: string
+  status: string
+  created_at: string
 }
 
-interface DashboardStats {
-  totalProjects: number
-  totalViews: number
-  avgEngagement: number
-  timeSaved: number
-}
-
-export default function DashboardPage() {
-  const [projects, setProjects] = useState<Project[]>([])
-  const [stats, setStats] = useState<DashboardStats>({
-    totalProjects: 0,
-    totalViews: 0,
-    avgEngagement: 0,
-    timeSaved: 0,
-  })
-  const [loading, setLoading] = useState(true)
+export default function Page() {
   const { user } = useAuth()
+  const [minutes, setMinutes] = useState<MinutesRes | null>(null)
+  const [projects, setProjects] = useState<Project[]>([])
+  const [loading, setLoading] = useState(true)
+  const [err, setErr] = useState<string | null>(null)
 
   useEffect(() => {
-    if (user) {
-      fetchProjects()
-      fetchStats()
-    }
-  }, [user])
-
-  const fetchProjects = async () => {
-    try {
-      const response = await fetch(`/api/projects?userId=${user?.id}`)
-      if (response.ok) {
-        const data = await response.json()
-        setProjects(data.projects || [])
-      } else {
-        console.error("Failed to fetch projects:", response.statusText)
-        setProjects([])
+    let mounted = true
+    const load = async () => {
+      try {
+        setLoading(true)
+        const [mRes, pRes] = await Promise.all([
+          fetch("/api/minutes", { cache: "no-store" }),
+          fetch("/api/projects", { cache: "no-store" }),
+        ])
+        if (!mRes.ok) throw new Error("Failed to load minutes")
+        if (!pRes.ok) throw new Error("Failed to load projects")
+        const m = (await mRes.json()) as MinutesRes
+        const p = (await pRes.json()) as { projects: Project[] }
+        if (!mounted) return
+        setMinutes(m)
+        setProjects(p.projects || [])
+      } catch (e: any) {
+        console.error(e)
+        if (mounted) setErr(e.message || "Failed to load dashboard")
+      } finally {
+        if (mounted) setLoading(false)
       }
-    } catch (error) {
-      console.error("Error fetching projects:", error)
-      toast.error("Failed to load projects", {
-        description: "Please try again",
-      })
-      setProjects([])
-    } finally {
-      setLoading(false)
     }
-  }
+    load()
+    return () => {
+      mounted = false
+    }
+  }, [])
 
-  const fetchStats = async () => {
-    try {
-      const response = await fetch(`/api/dashboard-stats?userId=${user?.id}`)
-      if (response.ok) {
-        const data = await response.json()
-        setStats(
-          data.stats || {
-            totalProjects: 0,
-            totalViews: 0,
-            avgEngagement: 0,
-            timeSaved: 0,
-          },
-        )
+  const totals = useMemo(() => {
+    const totalProjects = projects.length
+    const totalWords = projects.reduce((sum: number, p: any) => {
+      if (p?.content && typeof p.content === 'string') {
+        const words = p.content.trim().split(/\s+/).length
+        return sum + words
       }
-    } catch (error) {
-      console.error("Error fetching stats:", error)
-      // Keep default stats on error
-    }
-  }
+      return sum
+    }, 0)
+    return { totalProjects, totalWords }
+  }, [projects])
 
-  const deleteProject = async (projectId: string) => {
+  const buyAddon = async (minutes: number) => {
     try {
-      const response = await fetch(`/api/projects/${projectId}`, {
-        method: "DELETE",
+      const res = await fetch('/api/payments/create-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'addon', addon_minutes: minutes, currency: 'USD' }),
       })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Checkout failed')
 
-      if (response.ok) {
-        setProjects((prev) => prev.filter((p) => p.id !== projectId))
-        toast.success("Project deleted", {
-          description: "Project has been removed",
-        })
-      } else {
-        throw new Error("Failed to delete project")
+      // Open Razorpay Checkout
+      // Expect NEXT_PUBLIC_RAZORPAY_KEY_ID to be set
+      const key = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID as string | undefined
+      // Fallback to window var if injected elsewhere
+      const rzpKey = key || (typeof window !== 'undefined' && (window as any).RAZORPAY_KEY_ID)
+      if (!rzpKey) {
+        alert('Razorpay key missing')
+        return
       }
-    } catch (error) {
-      toast.error("Failed to delete project", {
-        description: "Please try again",
-      })
-    }
-  }
 
-  const getContentTypeIcon = (type: string) => {
-    switch (type) {
-      case "linkedin":
-        return Linkedin
-      case "twitter":
-        return Twitter
-      default:
-        return FileText
+      const options = {
+        key: rzpKey,
+        amount: data.order.amount,
+        currency: data.order.currency,
+        name: 'ReHaulX',
+        description: `${minutes} minutes add-on`,
+        order_id: data.order.id,
+        handler: function () {
+          // On success, reload minutes
+          fetch('/api/minutes', { cache: 'no-store' }).then(r => r.json()).then(setMinutes).catch(() => {})
+        },
+        prefill: {
+          email: user?.email,
+          name: user?.user_metadata?.full_name || user?.email,
+        },
+        theme: { color: '#2563eb' },
+      }
+      const rzp = new (window as any).Razorpay(options)
+      rzp.open()
+    } catch (e: any) {
+      console.error(e)
+      alert(e.message || 'Unable to start checkout')
     }
-  }
-
-  const getContentTypeLabel = (type: string) => {
-    switch (type) {
-      case "short-article":
-        return "Short Article"
-      case "long-article":
-        return "Long Article"
-      case "linkedin":
-        return "LinkedIn Post"
-      case "twitter":
-        return "Twitter Thread"
-      default:
-        return type
-    }
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-black">
-        <Header />
-        <main className="container mx-auto px-4 py-12 text-center">
-          <div className="max-w-md mx-auto">
-            <div className="h-16 w-16 mx-auto mb-6 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-xl flex items-center justify-center">
-              <Users className="h-8 w-8 text-blue-400" />
-            </div>
-            <h1 className="text-2xl font-bold text-white mb-4">Please sign in to view your dashboard</h1>
-            <p className="text-white/60 mb-6">Access your projects, analytics, and content creation tools</p>
-            <Link href="/">
-              <Button className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white border-0">
-                Go Home
-              </Button>
-            </Link>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    )
   }
 
   return (
-    <div className="min-h-screen bg-black">
-      <Header />
-
-      <main className="container mx-auto px-4 py-12">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-12">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-white via-white/90 to-white/70 bg-clip-text text-transparent mb-2">
-              Welcome back, {user.user_metadata?.first_name || "Creator"}!
-            </h1>
-            <p className="text-white/60">Manage your content projects and track your success</p>
+    <>
+      {/* Razorpay Checkout script */}
+      <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="afterInteractive" />
+      <div className="flex flex-1 flex-col">
+        <div className="@container/main flex flex-1 flex-col gap-4 py-6">
+          <div className="px-4 lg:px-6 -mt-4">
+            <Breadcrumbs items={[{ label: "Dashboard" }]} />
           </div>
-          <Link href="/">
-            <Button className="mt-4 md:mt-0 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white border-0">
-              <Plus className="mr-2 h-4 w-4" />
-              New Project
-            </Button>
-          </Link>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          <Card className="bg-white/5 backdrop-blur-xl border border-white/10 hover:bg-white/10 transition-all duration-300">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-white/60 text-sm">Total Projects</p>
-                  <p className="text-2xl font-bold text-white">{stats.totalProjects}</p>
-                </div>
-                <div className="h-12 w-12 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-xl flex items-center justify-center">
-                  <FileText className="h-6 w-6 text-blue-400" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/5 backdrop-blur-xl border border-white/10 hover:bg-white/10 transition-all duration-300">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-white/60 text-sm">Total Views</p>
-                  <p className="text-2xl font-bold text-white">{stats.totalViews.toLocaleString()}</p>
-                </div>
-                <div className="h-12 w-12 bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-xl flex items-center justify-center">
-                  <TrendingUp className="h-6 w-6 text-green-400" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/5 backdrop-blur-xl border border-white/10 hover:bg-white/10 transition-all duration-300">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-white/60 text-sm">Avg Engagement</p>
-                  <p className="text-2xl font-bold text-white">{stats.avgEngagement}%</p>
-                </div>
-                <div className="h-12 w-12 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-xl flex items-center justify-center">
-                  <Target className="h-6 w-6 text-purple-400" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/5 backdrop-blur-xl border border-white/10 hover:bg-white/10 transition-all duration-300">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-white/60 text-sm">Hours Saved</p>
-                  <p className="text-2xl font-bold text-white">{stats.timeSaved}</p>
-                </div>
-                <div className="h-12 w-12 bg-gradient-to-r from-orange-500/20 to-red-500/20 rounded-xl flex items-center justify-center">
-                  <Clock className="h-6 w-6 text-orange-400" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Quick Actions */}
-        <Card className="bg-white/5 backdrop-blur-xl border border-white/10 mb-12">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-white">
-              <Zap className="h-5 w-5 text-yellow-400" />
-              Quick Actions
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Link href="/">
-                <Button
-                  variant="outline"
-                  className="w-full h-20 bg-white/5 border-white/20 text-white hover:bg-white/10 hover:border-white/30 flex-col gap-2"
-                >
-                  <Video className="h-6 w-6 text-blue-400" />
-                  <span>Create Content</span>
-                </Button>
-              </Link>
-              <Button
-                variant="outline"
-                className="w-full h-20 bg-white/5 border-white/20 text-white hover:bg-white/10 hover:border-white/30 flex-col gap-2"
-                onClick={() => toast.info("Analytics coming soon!")}
-              >
-                <BarChart3 className="h-6 w-6 text-green-400" />
-                <span>View Analytics</span>
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full h-20 bg-white/5 border-white/20 text-white hover:bg-white/10 hover:border-white/30 flex-col gap-2"
-                onClick={() => toast.info("AI Insights coming soon!")}
-              >
-                <Sparkles className="h-6 w-6 text-purple-400" />
-                <span>AI Insights</span>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Projects */}
-        <Card className="bg-white/5 backdrop-blur-xl border border-white/10">
-          <CardHeader>
-            <CardTitle className="text-white">Your Projects</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="all" className="space-y-6">
-              <TabsList className="bg-white/10 border-white/20">
-                <TabsTrigger value="all" className="data-[state=active]:bg-white/20 text-white">
-                  All Projects
-                </TabsTrigger>
-                <TabsTrigger value="completed" className="data-[state=active]:bg-white/20 text-white">
-                  Completed
-                </TabsTrigger>
-                <TabsTrigger value="draft" className="data-[state=active]:bg-white/20 text-white">
-                  Drafts
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="all" className="space-y-4">
-                {loading ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {[...Array(6)].map((_, i) => (
-                      <Card key={i} className="animate-pulse bg-white/5 border-white/10">
-                        <CardHeader>
-                          <div className="h-4 bg-white/10 rounded w-3/4"></div>
-                          <div className="h-3 bg-white/10 rounded w-1/2"></div>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="h-32 bg-white/10 rounded mb-4"></div>
-                          <div className="h-3 bg-white/10 rounded w-full mb-2"></div>
-                          <div className="h-3 bg-white/10 rounded w-2/3"></div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                ) : projects.length === 0 ? (
-                  <Card className="text-center py-12 bg-white/5 border-white/10">
-                    <CardContent>
-                      <div className="h-16 w-16 mx-auto mb-6 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-xl flex items-center justify-center">
-                        <FileText className="h-8 w-8 text-blue-400" />
-                      </div>
-                      <h3 className="text-lg font-semibold mb-2 text-white">No projects yet</h3>
-                      <p className="text-white/60 mb-6">Create your first content project to get started</p>
-                      <Link href="/">
-                        <Button className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white border-0">
-                          <Plus className="mr-2 h-4 w-4" />
-                          Create Project
-                        </Button>
-                      </Link>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {projects.map((project) => {
-                      const ContentIcon = getContentTypeIcon(project.contentType)
-                      return (
-                        <Card
-                          key={project.id}
-                          className="bg-white/5 backdrop-blur-xl border border-white/10 hover:bg-white/10 transition-all duration-300 hover:scale-105"
-                        >
-                          <CardHeader>
-                            <div className="flex items-start justify-between">
-                              <div className="flex items-center gap-2">
-                                <ContentIcon className="h-4 w-4 text-blue-400" />
-                                <Badge
-                                  variant={project.status === "completed" ? "default" : "secondary"}
-                                  className={
-                                    project.status === "completed"
-                                      ? "bg-green-500/20 text-green-400 border-green-500/30"
-                                      : "bg-orange-500/20 text-orange-400 border-orange-500/30"
-                                  }
-                                >
-                                  {project.status}
-                                </Badge>
-                              </div>
-                              <div className="flex gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0 text-white/60 hover:text-white hover:bg-white/10"
-                                  onClick={() => toast.info("Edit feature coming soon!")}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => deleteProject(project.id)}
-                                  className="h-8 w-8 p-0 text-white/60 hover:text-red-400 hover:bg-red-500/10"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                            <CardTitle className="text-sm line-clamp-2 text-white">{project.title}</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <img
-                              src={project.thumbnail || "/placeholder.svg"}
-                              alt={project.title}
-                              className="w-full aspect-video object-cover rounded mb-4 border border-white/10"
-                            />
-                            <div className="space-y-3">
-                              <div className="flex items-center justify-between text-sm">
-                                <span className="text-white/80">{getContentTypeLabel(project.contentType)}</span>
-                                <div className="flex items-center gap-1 text-white/60">
-                                  <Calendar className="h-3 w-3" />
-                                  {new Date(project.createdAt).toLocaleDateString()}
-                                </div>
-                              </div>
-                              {project.status === "completed" &&
-                                project.views !== undefined &&
-                                project.engagement !== undefined && (
-                                  <div className="space-y-2">
-                                    <div className="flex items-center justify-between text-xs text-white/60">
-                                      <span>Views: {project.views?.toLocaleString()}</span>
-                                      <span>Engagement: {project.engagement}%</span>
-                                    </div>
-                                    <Progress value={project.engagement} className="h-1 bg-white/10" />
-                                  </div>
-                                )}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      )
-                    })}
-                  </div>
+          {/* Top metrics */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 px-4 lg:px-6">
+              <Card className="p-4 bg-white/5 backdrop-blur-xl border border-white/10">
+                <div className="text-white/60 text-sm">Remaining Minutes</div>
+                <div className="text-3xl font-semibold text-white mt-1">{minutes?.remaining ?? '—'}</div>
+                {minutes?.upgrade_nudge?.show && (
+                  <Badge className="mt-2 bg-orange-500/20 text-orange-400 border-orange-500/30">{minutes.upgrade_nudge.reason.replaceAll('_',' ')}</Badge>
                 )}
-              </TabsContent>
+              </Card>
+              <Card className="p-4 bg-white/5 backdrop-blur-xl border border-white/10">
+                <div className="text-white/60 text-sm">Allocated</div>
+                <div className="text-3xl font-semibold text-white mt-1">{minutes?.allocated ?? '—'}</div>
+              </Card>
+              <Card className="p-4 bg-white/5 backdrop-blur-xl border border-white/10">
+                <div className="text-white/60 text-sm">Used</div>
+                <div className="text-3xl font-semibold text-white mt-1">{minutes?.used ?? '—'}</div>
+              </Card>
+              <Card className="p-4 bg-white/5 backdrop-blur-xl border border-white/10">
+                <div className="text-white/60 text-sm">Projects</div>
+                <div className="text-3xl font-semibold text-white mt-1">{totals.totalProjects}</div>
+              </Card>
+          </div>
 
-              <TabsContent value="completed">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {projects
-                    .filter((p) => p.status === "completed")
-                    .map((project) => {
-                      const ContentIcon = getContentTypeIcon(project.contentType)
-                      return (
-                        <Card key={project.id} className="bg-white/5 backdrop-blur-xl border border-white/10">
-                          <CardHeader>
-                            <div className="flex items-center gap-2">
-                              <ContentIcon className="h-4 w-4 text-blue-400" />
-                              <Badge className="bg-green-500/20 text-green-400 border-green-500/30">completed</Badge>
-                            </div>
-                            <CardTitle className="text-sm line-clamp-2 text-white">{project.title}</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <img
-                              src={project.thumbnail || "/placeholder.svg"}
-                              alt={project.title}
-                              className="w-full aspect-video object-cover rounded mb-4 border border-white/10"
-                            />
-                            <div className="flex items-center justify-between text-sm text-white/60">
-                              <span>{getContentTypeLabel(project.contentType)}</span>
-                              <div className="flex items-center gap-1">
-                                <Calendar className="h-3 w-3" />
-                                {new Date(project.createdAt).toLocaleDateString()}
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      )
-                    })}
+          {/* Secondary metrics */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-4 lg:px-6">
+              <Card className="p-4 bg-white/5 backdrop-blur-xl border border-white/10">
+                <div className="text-white/60 text-sm">Total words generated</div>
+                <div className="text-2xl font-semibold text-white mt-1">{totals.totalWords}</div>
+              </Card>
+              <Card className="p-4 bg-white/5 backdrop-blur-xl border border-white/10">
+                <div className="text-white/60 text-sm">Subscription</div>
+                <div className="text-white mt-1">
+                  {minutes?.subscription?.plan?.display_name ? (
+                    <>
+                      <div className="text-lg font-semibold">{minutes.subscription.plan.display_name}</div>
+                      <div className="text-white/60 text-sm">Cycle ends {minutes?.cycle_end ? new Date(minutes.cycle_end).toLocaleDateString() : '—'}</div>
+                    </>
+                  ) : (
+                    <span className="text-white/60">Free plan</span>
+                  )}
                 </div>
-              </TabsContent>
+              </Card>
+              <Card className="p-4 bg-white/5 backdrop-blur-xl border border-white/10">
+                <div className="text-white/60 text-sm mb-2">Usage</div>
+                {(() => {
+                  const allocated = minutes?.allocated ?? 0
+                  const used = minutes?.used ?? 0
+                  const usedPct = allocated > 0 ? Math.min((used / allocated) * 100, 100) : 0
+                  return (
+                    <>
+                      <div className="h-3 w-full rounded-full bg-white/10 overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-blue-600 to-purple-600" style={{ width: `${usedPct}%` }} />
+                      </div>
+                      <div className="flex justify-between text-white/70 text-xs mt-2">
+                        <span>Used {used}m</span>
+                        <span>Alloc {allocated}m</span>
+                      </div>
+                    </>
+                  )
+                })()}
+              </Card>
+          </div>
 
-              <TabsContent value="draft">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {projects
-                    .filter((p) => p.status === "draft")
-                    .map((project) => {
-                      const ContentIcon = getContentTypeIcon(project.contentType)
-                      return (
-                        <Card key={project.id} className="bg-white/5 backdrop-blur-xl border border-white/10">
-                          <CardHeader>
-                            <div className="flex items-center gap-2">
-                              <ContentIcon className="h-4 w-4 text-blue-400" />
-                              <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30">draft</Badge>
-                            </div>
-                            <CardTitle className="text-sm line-clamp-2 text-white">{project.title}</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <img
-                              src={project.thumbnail || "/placeholder.svg"}
-                              alt={project.title}
-                              className="w-full aspect-video object-cover rounded mb-4 border border-white/10"
-                            />
-                            <div className="flex items-center justify-between text-sm text-white/60">
-                              <span>{getContentTypeLabel(project.contentType)}</span>
-                              <div className="flex items-center gap-1">
-                                <Calendar className="h-3 w-3" />
-                                {new Date(project.createdAt).toLocaleDateString()}
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      )
-                    })}
+          {/* Billing actions */}
+          <div className="px-4 lg:px-6">
+              <Card className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between bg-white/5 backdrop-blur-xl border border-white/10">
+                <div>
+                  <div className="text-white font-medium">Need more minutes?</div>
+                  <div className="text-white/60 text-sm">Buy quick add-ons or upgrade your plan on the pricing page.</div>
                 </div>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
-      </main>
+                <div className="mt-3 sm:mt-0 flex gap-2">
+                  <Button onClick={() => buyAddon(50)} className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600">+50 min ($5)</Button>
+                  <Button onClick={() => buyAddon(100)} variant="outline" className="bg-white/5 backdrop-blur-xl border-white/20 hover:bg-white/10 hover:border-white/30">+100 min ($10)</Button>
+                </div>
+              </Card>
+          </div>
 
-      <Footer />
-    </div>
+          {/* Projects table (compact) */}
+          <div className="px-4 lg:px-6">
+              <Card className="bg-white/5 backdrop-blur-xl border border-white/10">
+                <div className="p-4 border-b border-white/10 flex items-center justify-between">
+                  <div className="text-white font-semibold">Recent Projects</div>
+                  <Button variant="outline" className="bg-white/5 backdrop-blur-xl border-white/20 hover:bg-white/10 hover:border-white/30" onClick={() => (window.location.href = '/repurpose')}>New Project</Button>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="text-white/60">
+                      <tr>
+                        <th className="text-left px-4 py-2">Title</th>
+                        <th className="text-left px-4 py-2">Type</th>
+                        <th className="text-left px-4 py-2">Status</th>
+                        <th className="text-left px-4 py-2">Created</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {loading ? (
+                        <tr>
+                          <td className="px-4 py-4 text-white/60" colSpan={4}>Loading…</td>
+                        </tr>
+                      ) : projects.length === 0 ? (
+                        <tr>
+                          <td className="px-4 py-4 text-white/60" colSpan={4}>No projects yet</td>
+                        </tr>
+                      ) : (
+                        projects.slice(0, 8).map((p) => (
+                          <tr key={p.id} className="border-t border-white/10">
+                            <td className="px-4 py-3 text-white">{p.title}</td>
+                            <td className="px-4 py-3 text-white/80">{p.content_type}</td>
+                            <td className="px-4 py-3">
+                              <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">{p.status}</Badge>
+                            </td>
+                            <td className="px-4 py-3 text-white/60">{new Date(p.created_at).toLocaleString()}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+          </div>
+
+          {err && (
+            <div className="px-4 lg:px-6">
+              <Card className="p-4 bg-orange-500/10 border border-orange-500/30 text-orange-300">{err}</Card>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
   )
 }

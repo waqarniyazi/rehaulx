@@ -197,11 +197,17 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
             <TabsContent value="signin" className="space-y-4 mt-6">
               {/* Social logins */}
               <div className="grid grid-cols-2 gap-3">
-                <Button onClick={() => signInWithOAuth('google')} className="bg-[#24292e] text-white hover:bg-[#24292e]/90">
-                  <span className="mr-2 h-4 w-4 rounded-sm bg-white/10 text-white flex items-center justify-center text-[10px]">G</span>
+                <Button
+                  onClick={() => { signInWithOAuth('google'); onClose(); }}
+                  className="bg-[#24292e] text-white hover:bg-[#24292e]/90border border-white/80"
+                >
+                  <span className="mr-2 h-4 w-4 rounded-sm bg-gray-50 text-black flex items-center justify-center text-[10px]">G</span>
                   Google
                 </Button>
-                <Button onClick={() => signInWithOAuth('github')} className="bg-[#24292e] text-white hover:bg-[#24292e]/90">
+                <Button
+                  onClick={() => { signInWithOAuth('github'); onClose(); }}
+                  className="bg-[#24292e] text-white hover:bg-[#24292e]/90"
+                >
                   <Github className="h-4 w-4 mr-2" /> GitHub
                 </Button>
               </div>

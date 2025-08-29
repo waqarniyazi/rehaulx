@@ -1,45 +1,21 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
-import { cookies } from "next/headers"
+import { NextResponse } from "next/server"
+import { createClient } from "@/lib/supabase/server"
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get("userId")
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
-    if (!userId) {
-      return NextResponse.json({ error: "User ID is required" }, { status: 400 })
-    }
-
-    const supabase = createRouteHandlerClient({ cookies })
-
-    // Get project count
     const { count: totalProjects } = await supabase
       .from("projects")
       .select("*", { count: "exact", head: true })
-      .eq("user_id", userId)
+      .eq("user_id", user.id)
 
-    // Get projects for calculating stats
-    const { data: projects } = await supabase
-      .from("projects")
-      .select("views, engagement, created_at")
-      .eq("user_id", userId)
-
-    const totalViews = projects?.reduce((sum, project) => sum + (project.views || 0), 0) || 0
-    const avgEngagement = projects?.length
-      ? projects.reduce((sum, project) => sum + (project.engagement || 0), 0) / projects.length
-      : 0
-
-    // Calculate time saved (estimate 2 hours per project)
-    const timeSaved = (totalProjects || 0) * 2
-
+    // Minimal stats for now; extend when fields exist
     const stats = {
       totalProjects: totalProjects || 0,
-      totalViews,
-      avgEngagement: Math.round(avgEngagement * 10) / 10,
-      timeSaved,
     }
-
     return NextResponse.json({ stats })
   } catch (error) {
     console.error("Dashboard stats error:", error)

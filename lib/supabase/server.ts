@@ -17,12 +17,14 @@ export async function createClient() {
         setAll(cookiesToSet) {
           try {
             const isProd = process.env.NODE_ENV === 'production'
-            const parentDomain = isProd ? '.rehaulx.com' : undefined
             cookiesToSet.forEach(({ name, value, options }) => {
               const merged: CookieOptions = {
                 ...options,
-                domain: parentDomain ?? options?.domain,
+                domain: isProd ? '.rehaulx.com' : options?.domain,
                 sameSite: 'lax',
+                secure: isProd,
+                httpOnly: options?.httpOnly ?? true,
+                path: '/',
               }
               cookieStore.set(name, value, merged)
             })
@@ -32,6 +34,12 @@ export async function createClient() {
             // user sessions.
           }
         },
+      },
+      auth: {
+        flowType: 'pkce',
+        autoRefreshToken: true,
+        detectSessionInUrl: false, // Server should not detect URL sessions
+        persistSession: true,
       },
     }
   )

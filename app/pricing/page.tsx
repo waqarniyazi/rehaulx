@@ -1,111 +1,53 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import Image from "next/image"
+import Script from "next/script"
 import { Header } from "@/components/Header/Header"
 import { Footer } from "@/components/Footer/Footer"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
-import { Sparkles, Check, Zap, Crown, Rocket, Star, Users, Shield, Headphones, TrendingUp, Globe } from "lucide-react"
+import { Sparkles, Check, Zap, Crown, Rocket, Star, Users, Shield, Headphones, TrendingUp, Globe, Banknote } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+
+type Currency = "USD" | "INR" | "GBP" | "EUR"
+
+const CURRENCY_SYMBOL: Record<Currency, string> = {
+  USD: "$",
+  INR: "₹",
+  GBP: "£",
+  EUR: "€",
+}
+
+// Approximate conversion rates relative to USD (display only)
+const FX: Record<Currency, number> = {
+  USD: 1,
+  INR: 83.5,
+  GBP: 0.78,
+  EUR: 0.92,
+}
 
 export default function PricingPage() {
   const [isAnnual, setIsAnnual] = useState(false)
+  const [plans, setPlans] = useState<any[]>([])
+  const [currency, setCurrency] = useState<Currency>("USD")
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null)
 
-  const plans = [
-    {
-      name: "Starter",
-      description: "Perfect for individual creators getting started",
-      icon: Sparkles,
-      price: { monthly: 0, annual: 0 },
-      badge: "Free Forever",
-      badgeColor: "bg-green-500/20 text-green-400 border-green-500/30",
-      features: [
-        "5 videos per month",
-        "Basic content generation",
-        "2 content formats (Blog, LinkedIn)",
-        "Standard processing speed",
-        "Community support",
-        "Basic analytics",
-      ],
-      limitations: ["No custom branding", "Standard quality exports", "Limited AI features"],
-      cta: "Get Started Free",
-      ctaVariant: "outline" as const,
-    },
-    {
-      name: "Creator",
-      description: "For serious content creators and small teams",
-      icon: Zap,
-      price: { monthly: 29, annual: 24 },
-      badge: "Most Popular",
-      badgeColor: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-      features: [
-        "50 videos per month",
-        "Advanced AI content generation",
-        "All 4 content formats",
-        "Priority processing",
-        "Email support",
-        "Advanced analytics",
-        "Custom branding",
-        "HD quality exports",
-        "Batch processing",
-        "API access (basic)",
-      ],
-      limitations: [],
-      cta: "Start Free Trial",
-      ctaVariant: "default" as const,
-      popular: true,
-    },
-    {
-      name: "Professional",
-      description: "For agencies and growing businesses",
-      icon: Crown,
-      price: { monthly: 99, annual: 79 },
-      badge: "Best Value",
-      badgeColor: "bg-purple-500/20 text-purple-400 border-purple-500/30",
-      features: [
-        "200 videos per month",
-        "Premium AI models",
-        "All content formats + custom",
-        "Fastest processing",
-        "Priority support",
-        "Team collaboration (5 seats)",
-        "White-label options",
-        "4K quality exports",
-        "Advanced API access",
-        "Custom integrations",
-        "Dedicated account manager",
-      ],
-      limitations: [],
-      cta: "Start Free Trial",
-      ctaVariant: "default" as const,
-    },
-    {
-      name: "Enterprise",
-      description: "For large organizations with custom needs",
-      icon: Rocket,
-      price: { monthly: "Custom", annual: "Custom" },
-      badge: "Contact Sales",
-      badgeColor: "bg-orange-500/20 text-orange-400 border-orange-500/30",
-      features: [
-        "Unlimited videos",
-        "Custom AI model training",
-        "All features included",
-        "Dedicated infrastructure",
-        "24/7 phone support",
-        "Unlimited team seats",
-        "Full white-label solution",
-        "Custom export formats",
-        "Enterprise API",
-        "Custom integrations",
-        "SLA guarantees",
-        "On-premise deployment",
-      ],
-      limitations: [],
-      cta: "Contact Sales",
-      ctaVariant: "outline" as const,
-    },
-  ]
+  useEffect(() => {
+    fetch('/api/plans')
+      .then((r) => r.json())
+      .then((d) => setPlans(d.plans || []))
+      .catch(() => setPlans([]))
+  }, [])
 
   const faqs = [
     {
@@ -151,31 +93,109 @@ export default function PricingPage() {
     {
       name: "Extra Processing Power",
       description: "2x faster video processing",
-      price: "$10/month",
+      priceUsd: 10,
       icon: Zap,
     },
     {
       name: "Premium Support",
       description: "Priority email & chat support",
-      price: "$25/month",
+      priceUsd: 25,
       icon: Headphones,
     },
     {
       name: "Advanced Analytics",
       description: "Detailed performance insights",
-      price: "$15/month",
+      priceUsd: 15,
       icon: TrendingUp,
     },
     {
       name: "Custom Integrations",
       description: "Connect to your favorite tools",
-      price: "$50/month",
+      priceUsd: 50,
       icon: Globe,
     },
   ]
 
+  const formatPrice = (usd: number) => {
+    const amount = usd * FX[currency]
+    // Round sensibly for INR (no decimals) vs others (2 decimals)
+    const minimumFractionDigits = currency === "INR" ? 0 : 2
+    const maximumFractionDigits = currency === "INR" ? 0 : 2
+    try {
+      return new Intl.NumberFormat(undefined, {
+        style: "currency",
+        currency,
+        minimumFractionDigits,
+        maximumFractionDigits,
+      }).format(amount)
+    } catch {
+      // Fallback if environment lacks Intl currency support
+      return `${CURRENCY_SYMBOL[currency]}${amount.toFixed(maximumFractionDigits)}`
+    }
+  }
+
+  const currencyIconPath = (c: Currency) => `/PricingIcons/${c}.png`
+
+  const planIconFor = (planName: string) => {
+    switch (planName) {
+      case 'starter':
+        return <Star className="h-6 w-6 text-blue-400" />
+      case 'basic':
+        return <Rocket className="h-6 w-6 text-purple-400" />
+      case 'growth':
+        return <TrendingUp className="h-6 w-6 text-emerald-400" />
+      case 'pro':
+        return <Crown className="h-6 w-6 text-yellow-400" />
+      default:
+        return <Sparkles className="h-6 w-6 text-blue-400" />
+    }
+  }
+
+  const handleSubscribe = async (plan: any, cycle: 'monthly' | 'yearly') => {
+    try {
+      setLoadingPlan(`${plan.id}-${cycle}`)
+      const res = await fetch('/api/payments/create-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'subscription',
+          plan_id: String(plan.id),
+          billing_cycle: cycle,
+          currency: currency === 'INR' ? 'INR' : 'USD',
+        })
+      })
+    const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Checkout failed')
+
+      // Load Razorpay Checkout
+    const { order, key_id } = data
+      // @ts-ignore
+      if (typeof window !== 'undefined' && window.Razorpay) {
+        // @ts-ignore
+        const rzp = new window.Razorpay({
+      key: key_id || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'your_public_key',
+          amount: order.amount,
+          currency: order.currency,
+          name: 'ReHaulX',
+          description: `${plan.display_name} (${cycle})`,
+          order_id: order.id,
+          notes: order.notes,
+        })
+        rzp.open()
+      } else {
+        alert('Razorpay not available. Please ensure the script is loaded on this page.')
+      }
+    } catch (e: any) {
+      alert(e.message || 'Failed to start checkout')
+    } finally {
+      setLoadingPlan(null)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-black">
+      {/* Razorpay Checkout script */}
+      <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="afterInteractive" />
       <Header />
 
       <main className="container mx-auto px-4 py-12">
@@ -193,71 +213,95 @@ export default function PricingPage() {
           </p>
 
           {/* Billing Toggle */}
-          <div className="flex items-center justify-center gap-4 mb-12">
-            <span className={`text-sm ${!isAnnual ? "text-white" : "text-white/60"}`}>Monthly</span>
-            <Switch checked={isAnnual} onCheckedChange={setIsAnnual} className="data-[state=checked]:bg-blue-500" />
-            <span className={`text-sm ${isAnnual ? "text-white" : "text-white/60"}`}>Annual</span>
-            <Badge className="bg-green-500/20 text-green-400 border-green-500/30 ml-2">Save 20%</Badge>
+          <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center sm:gap-4 mb-12">
+            <div className="flex items-center gap-4">
+              <span className={`text-sm ${!isAnnual ? "text-white" : "text-white/60"}`}>Monthly</span>
+              <Switch checked={isAnnual} onCheckedChange={setIsAnnual} className="data-[state=checked]:bg-blue-500" />
+              <span className={`text-sm ${isAnnual ? "text-white" : "text-white/60"}`}>Annual</span>
+              <Badge className="bg-green-500/20 text-green-400 border-green-500/30">Save 20%</Badge>
+            </div>
+            <div className="sm:ml-6">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="bg-white/5 backdrop-blur-xl border-white/20 hover:bg-white/10 hover:border-white/30">
+                    <Banknote className="mr-2 h-4 w-4" />
+                    <span className="mr-2">{currency}</span>
+                    <Image src={currencyIconPath(currency)} alt={`${currency} icon`} width={16} height={16} className="rounded-sm" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-44 bg-black/95 text-white border border-white/10" align="end" sideOffset={8}>
+                  <DropdownMenuLabel>Select Currency</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {(["USD", "INR", "GBP", "EUR"] as Currency[]).map((c) => (
+                    <DropdownMenuItem key={c} onClick={() => setCurrency(c)} className="cursor-pointer flex items-center gap-2">
+                      <Image src={currencyIconPath(c)} alt={`${c} icon`} width={16} height={16} className="rounded-sm" />
+                      <span>{c}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </div>
 
-        {/* Pricing Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
-          {plans.map((plan, index) => (
+        {/* Pricing Cards (live from DB) */}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16 items-stretch">
+      {plans.map((plan: any) => (
             <Card
-              key={index}
-              className={`bg-white/5 backdrop-blur-xl border transition-all duration-300 hover:scale-105 ${
-                plan.popular
-                  ? "border-blue-500/50 bg-gradient-to-b from-blue-500/10 to-transparent"
+              key={plan.id}
+      className={`bg-white/5 backdrop-blur-xl border transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/10 group flex flex-col h-full ${
+                plan.name === 'growth' && isAnnual
+                  ? "border-purple-500/50 bg-gradient-to-b from-purple-500/10 to-transparent"
                   : "border-white/10 hover:border-white/20"
               }`}
             >
               <CardHeader className="text-center pb-4">
                 <div className="flex items-center justify-center mb-4">
-                  <div className="h-12 w-12 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-xl flex items-center justify-center">
-                    <plan.icon className="h-6 w-6 text-blue-400" />
+                  <div className="h-12 w-12 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110">
+                    {planIconFor(plan.name)}
                   </div>
                 </div>
-                <CardTitle className="text-white text-xl mb-2">{plan.name}</CardTitle>
-                <p className="text-white/60 text-sm mb-4">{plan.description}</p>
-                <Badge className={plan.badgeColor}>{plan.badge}</Badge>
+                <CardTitle className="text-white text-xl mb-2">{plan.display_name}</CardTitle>
+                {/* minutes moved below with gradient highlight */}
+                {plan.name === 'growth' && isAnnual && (
+                  <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">Best Value</Badge>
+                )}
               </CardHeader>
-              <CardContent className="pt-0">
+               <CardContent className="pt-0 flex flex-col h-full">
                 <div className="text-center mb-6">
                   <div className="text-3xl font-bold text-white mb-1">
-                    {typeof plan.price.monthly === "number" ? (
-                      <>
-                        ${isAnnual ? plan.price.annual : plan.price.monthly}
-                        <span className="text-lg text-white/60">/month</span>
-                      </>
-                    ) : (
-                      plan.price.monthly
-                    )}
+                    {formatPrice((isAnnual ? plan.price_yearly : plan.price_monthly) || 0)}
+                    <span className="text-lg text-white/60">/{isAnnual ? 'year' : 'month'}</span>
                   </div>
-                  {typeof plan.price.monthly === "number" && plan.price.monthly > 0 && isAnnual && (
-                    <p className="text-sm text-white/60">Billed annually (${plan.price.annual * 12}/year)</p>
+                  {isAnnual && (
+                    <p className="text-sm text-white/60">Billed annually</p>
                   )}
                 </div>
-
+                {/* Minutes highlight */}
+                <p className="text-sm mb-4 text-white/70 text-center">
+                  <span className="bg-gradient-to-r from-blue-300 via-blue-200 to-blue-100 bg-clip-text text-transparent font-semibold">
+                    {isAnnual ? plan.minutes_yearly : plan.minutes_monthly}
+                  </span>{' '}
+                  minutes included
+                </p>
                 <ul className="space-y-3 mb-6">
-                  {plan.features.map((feature, featureIndex) => (
-                    <li key={featureIndex} className="flex items-start gap-2">
+                  {(plan.perks || []).map((perk: string, i: number) => (
+                    <li key={i} className="flex items-start gap-2">
                       <Check className="h-4 w-4 text-green-400 mt-0.5 flex-shrink-0" />
-                      <span className="text-white/80 text-sm">{feature}</span>
+                      <span className="text-white/80 text-sm">{perk}</span>
                     </li>
                   ))}
                 </ul>
 
-                <Button
-                  className={`w-full ${
-                    plan.ctaVariant === "default"
-                      ? "bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white border-0"
-                      : "bg-white/5 border-white/20 text-white hover:bg-white/10"
-                  }`}
-                  variant={plan.ctaVariant}
-                >
-                  {plan.cta}
-                </Button>
+                <div className="mt-auto">
+                  <Button
+                    className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white border-0 hover:scale-[1.02] transition-transform duration-300"
+                    onClick={() => handleSubscribe(plan, isAnnual ? 'yearly' : 'monthly')}
+                    disabled={loadingPlan === `${plan.id}-${isAnnual ? 'yearly' : 'monthly'}`}
+                  >
+                    {loadingPlan === `${plan.id}-${isAnnual ? 'yearly' : 'monthly'}` ? 'Processing…' : 'Subscribe Now'}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
@@ -280,7 +324,7 @@ export default function PricingPage() {
                   </div>
                   <h3 className="text-lg font-semibold text-white mb-2">{addon.name}</h3>
                   <p className="text-white/60 text-sm mb-4">{addon.description}</p>
-                  <div className="text-blue-400 font-semibold">{addon.price}</div>
+                  <div className="text-blue-400 font-semibold">{formatPrice(addon.priceUsd)}/month</div>
                 </CardContent>
               </Card>
             ))}

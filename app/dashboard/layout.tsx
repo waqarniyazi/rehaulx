@@ -1,5 +1,8 @@
+"use client"
+
 import type React from "react"
-import { Header } from "@/components/Header/Header"
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import { AppSidebar } from "@/components/app-sidebar"
 
 export default function DashboardLayout({
   children,
@@ -7,9 +10,14 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main className="container mx-auto px-4 py-8">{children}</main>
-    </div>
+    <SidebarProvider>
+      <AppSidebar />
+  <main className="min-h-screen bg-black">
+        <div className="px-4 lg:px-6 pt-4 flex items-center gap-2">
+          <SidebarTrigger />
+        </div>
+        <div className="pb-8">{children}</div>
+      </main>
+    </SidebarProvider>
   )
 }
